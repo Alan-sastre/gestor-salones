@@ -21,7 +21,7 @@ npm --version
 ### 1. Clona el repositorio
 
 ```bash
-git clone https://github.com/TU-USUARIO/gestor-salones.git
+git clone https://github.com/Alan-sastre/gestor-salones.git
 cd gestor-salones
 ```
 
