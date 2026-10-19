@@ -14,29 +14,29 @@ const timeToMinutes = (time) => {
 };
 
 const TYPE_BADGES = {
+  Gafas: 'bg-cyan-100 text-cyan-700',
+  impresora: 'bg-fuchsia-100 text-fuchsia-700',
   proyector: 'bg-sky-100 text-sky-700',
   microfono: 'bg-violet-100 text-violet-700',
   laptop: 'bg-emerald-100 text-emerald-700',
   camara: 'bg-amber-100 text-amber-700',
 };
 const TYPE_LABELS = {
+  Gafas: 'Gafas VR',
+  impresora: 'Impresora 3D',
   proyector: 'Proyector',
   microfono: 'Micrófono',
   laptop: 'Laptop',
   camara: 'Cámara',
 };
 
-export default function EquipmentPanel({ selectedDay, equipmentBookings, onBookEquipment, onBack, onContinue, direction }) {
+export default function EquipmentPanel({ equipment = EQUIPMENT, selectedDay, equipmentBookings, onBookEquipment, onBack, onContinue, direction }) {
   const [openId, setOpenId] = useState(null);
+  const [bookingId, setBookingId] = useState(null);
   const [times, setTimes] = useState(() =>
-    Object.fromEntries(EQUIPMENT.map((eq) => [eq.id, { start: '07:00', end: '09:00' }]))
+    Object.fromEntries(equipment.map((eq) => [eq.id, { start: '07:00', end: '09:00' }]))
   );
   const animClass = direction === 'back' ? 'step-enter-back' : 'step-enter';
-
-  const bookedCountOnDay = (equipId, total) => {
-    const dayBookings = (equipmentBookings[equipId] || []).filter((b) => b.date === selectedDay);
-    return Math.min(dayBookings.length, total);
-  };
 
   const handleStartChange = (equipId, value) => {
     setTimes((prev) => {
@@ -51,11 +51,13 @@ export default function EquipmentPanel({ selectedDay, equipmentBookings, onBookE
     setTimes((prev) => ({ ...prev, [equipId]: { ...prev[equipId], end: value } }));
   };
 
-  const handleBook = (equipId) => {
+  const handleBook = async (equipId) => {
     const { start, end } = times[equipId] || { start: '07:00', end: '09:00' };
     if (timeToMinutes(start) >= timeToMinutes(end)) return;
-    onBookEquipment(equipId, start, end);
-    setOpenId(null);
+    setBookingId(equipId);
+    const saved = await onBookEquipment(equipId, start, end);
+    if (saved) setOpenId(null);
+    setBookingId(null);
   };
 
   return (
@@ -68,12 +70,25 @@ export default function EquipmentPanel({ selectedDay, equipmentBookings, onBookE
       </div>
 
       <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {EQUIPMENT.map((eq) => {
-          const booked = bookedCountOnDay(eq.id, eq.total);
-          const available = eq.total - booked;
-          const isAvailable = available > 0;
+        {equipment.map((eq) => {
           const isOpen = openId === eq.id;
           const { start, end } = times[eq.id] || { start: '07:00', end: '09:00' };
+          const dayBookings = (equipmentBookings[eq.id] || []).filter((booking) => booking.date === selectedDay);
+          const events = dayBookings.flatMap((booking) => [
+            { time: booking.a, change: 1 },
+            { time: booking.b, change: -1 },
+          ]).sort((first, second) => first.time.localeCompare(second.time) || first.change - second.change);
+          let inUse = 0;
+          let peakInUse = 0;
+          events.forEach((event) => {
+            inUse += event.change;
+            peakInUse = Math.max(peakInUse, inUse);
+          });
+          const availableToday = Math.max(0, eq.total - peakInUse);
+          const unitsInSelectedSlot = dayBookings.filter(
+            (booking) => start < booking.b && end > booking.a
+          ).length;
+          const availableInSelectedSlot = Math.max(0, eq.total - unitsInSelectedSlot);
 
           return (
             <div
@@ -93,32 +108,39 @@ export default function EquipmentPanel({ selectedDay, equipmentBookings, onBookE
 
               <p className="text-xs text-slate-500 leading-relaxed">{eq.desc}</p>
 
+              {eq.modelUrl && (
+                <div className="aspect-video w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
+                  <iframe
+                    title={`Modelo 3D: ${eq.name}`}
+                    src={eq.modelUrl}
+                    className="h-full w-full border-0"
+                    allow="autoplay; fullscreen; xr-spatial-tracking"
+                    allowFullScreen
+                    loading="lazy"
+                  />
+                </div>
+              )}
+
               {/* Availability indicator */}
               <div className={[
                 'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold self-start',
-                isAvailable ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                availableToday > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
               ].join(' ')}>
                 <span className={[
                   'h-2 w-2 rounded-full',
-                  isAvailable ? 'bg-emerald-500' : 'bg-rose-500'
+                  availableToday > 0 ? 'bg-emerald-500' : 'bg-amber-500'
                 ].join(' ')} />
-                {isAvailable ? `${available} de ${eq.total} disponibles hoy` : 'No disponible'}
+                Hasta {availableToday} de {eq.total} disponibles hoy
               </div>
 
               <div className="mt-auto pt-1">
                 {!isOpen ? (
                   <button
                     type="button"
-                    onClick={() => isAvailable && setOpenId(eq.id)}
-                    disabled={!isAvailable}
-                    className={[
-                      'w-full rounded-xl py-2 text-xs font-semibold transition',
-                      isAvailable
-                        ? 'bg-sky-600 text-white hover:bg-sky-700 active:scale-95'
-                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                    ].join(' ')}
+                    onClick={() => setOpenId(eq.id)}
+                    className="w-full rounded-xl bg-sky-600 py-2 text-xs font-semibold text-white transition hover:bg-sky-700 active:scale-95"
                   >
-                    {isAvailable ? 'Reservar' : 'No disponible'}
+                    Reservar
                   </button>
                 ) : (
                   <div className="animate-fadeInUp space-y-2" style={{animationDuration: '250ms'}}>
@@ -152,14 +174,17 @@ export default function EquipmentPanel({ selectedDay, equipmentBookings, onBookE
                         </select>
                       </label>
                     </div>
+                    <p className={`text-[11px] font-medium ${availableInSelectedSlot > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      {availableInSelectedSlot} de {eq.total} unidades disponibles en este horario
+                    </p>
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => handleBook(eq.id)}
-                        disabled={timeToMinutes(start) >= timeToMinutes(end)}
+                        disabled={timeToMinutes(start) >= timeToMinutes(end) || availableInSelectedSlot === 0 || bookingId === eq.id}
                         className="flex-1 rounded-xl bg-sky-600 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        Confirmar
+                        {bookingId === eq.id ? 'Guardando…' : 'Confirmar'}
                       </button>
                       <button
                         type="button"

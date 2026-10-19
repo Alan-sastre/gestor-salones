@@ -9,6 +9,7 @@ export default function BookingSummaryScreen({
   endTime,
   reason,
   equipmentBookings,
+  equipment = EQUIPMENT,
   onEditSpace,
   onEditCalendar,
   onEditEquipment,
@@ -30,7 +31,7 @@ export default function BookingSummaryScreen({
   const bookedEquipment = Object.entries(equipmentBookings).flatMap(([equipId, bookingList]) => {
     const dayBookings = bookingList.filter((b) => b.date === selectedDay);
     if (dayBookings.length === 0) return [];
-    const eq = EQUIPMENT.find((e) => e.id === equipId);
+    const eq = equipment.find((e) => e.id === equipId);
     return dayBookings.map((b) => ({
       name: eq ? eq.name : equipId,
       a: b.a,

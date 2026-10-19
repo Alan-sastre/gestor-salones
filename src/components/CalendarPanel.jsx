@@ -1,6 +1,7 @@
+import { memo, useMemo } from 'react';
 import { FaCheck } from 'react-icons/fa';
 
-export default function CalendarPanel({
+function CalendarPanel({
   currentMonth,
   selectedSpace,
   selectedDay,
@@ -10,6 +11,13 @@ export default function CalendarPanel({
   todayKey,
 }) {
   const currentMonthLabel = currentMonth.toLocaleDateString('es', { month: 'long', year: 'numeric' });
+  const bookingsByDate = useMemo(() => {
+    const grouped = new Map();
+    (bookings || []).forEach((booking) => {
+      grouped.set(booking.date, (grouped.get(booking.date) || 0) + 1);
+    });
+    return grouped;
+  }, [bookings]);
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -19,13 +27,13 @@ export default function CalendarPanel({
   const cells = [];
 
   for (let i = 0; i < offset; i += 1) {
-    cells.push(<div key={`empty-${i}`} className="h-16 rounded-xl border border-transparent" />);
+    cells.push(<div key={`empty-${i}`} className="aspect-square rounded-2xl border border-transparent sm:h-20" />);
   }
 
   for (let day = 1; day <= lastDay.getDate(); day += 1) {
     const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const dayBookings = (bookings || []).filter((item) => item.date === dateKey);
-    const hasBookings = dayBookings.length > 0;
+    const bookingCount = bookingsByDate.get(dateKey) || 0;
+    const hasBookings = bookingCount > 0;
     const isSelectedDay = dateKey === selectedDay;
     const isToday = dateKey === todayKey;
 
@@ -37,12 +45,12 @@ export default function CalendarPanel({
         aria-pressed={isSelectedDay}
         title={
           hasBookings
-            ? `${day} · ${dayBookings.length} reserva${dayBookings.length > 1 ? 's' : ''}`
+            ? `${day} · ${bookingCount} reserva${bookingCount > 1 ? 's' : ''}`
             : `${day} · libre`
         }
-        aria-label={`${day} de ${currentMonthLabel}${hasBookings ? `, ${dayBookings.length} reserva${dayBookings.length > 1 ? 's' : ''}` : ', libre'}${isSelectedDay ? ', seleccionado' : ''}`}
+        aria-label={`${day} de ${currentMonthLabel}${hasBookings ? `, ${bookingCount} reserva${bookingCount > 1 ? 's' : ''}` : ', libre'}${isSelectedDay ? ', seleccionado' : ''}`}
         className={[
-          'group relative flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl border text-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 sm:h-16',
+          'group relative flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl border text-base transition duration-200 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 sm:h-20 sm:gap-1.5',
           isSelectedDay
             ? `day-selected border-sky-400 ${hasBookings ? 'bg-rose-50 hover:bg-rose-100' : 'bg-sky-100 hover:bg-sky-200'} ring-2 ring-sky-100 shadow-md`
             : hasBookings
@@ -83,7 +91,7 @@ export default function CalendarPanel({
 
         {hasBookings && (
           <span className="hidden text-[10px] font-medium text-rose-700 sm:block">
-            {dayBookings.length} reserva{dayBookings.length > 1 ? 's' : ''}
+            {bookingCount} reserva{bookingCount > 1 ? 's' : ''}
           </span>
         )}
 
@@ -123,11 +131,11 @@ export default function CalendarPanel({
         </div>
       </div>
 
-      <div className="mb-1 grid grid-cols-7 text-center text-xs font-semibold text-slate-500">
+      <div className="mb-2 grid grid-cols-7 text-center text-xs font-bold uppercase tracking-wide text-slate-500">
         <div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div>
       </div>
 
-      <div key={currentMonthLabel} className="animate-fade-in grid grid-cols-7 gap-1">{cells}</div>
+      <div key={currentMonthLabel} className="animate-fade-in grid grid-cols-7 gap-1.5 sm:gap-2">{cells}</div>
 
       <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500">
         <span className="flex items-center gap-1">
@@ -139,3 +147,5 @@ export default function CalendarPanel({
     </div>
   );
 }
+
+export default memo(CalendarPanel);

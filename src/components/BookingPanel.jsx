@@ -61,31 +61,48 @@ export default function BookingPanel({
           <h3 className="font-semibold capitalize text-slate-900">{dayTitle}</h3>
         </div>
 
-        <ul className="mt-2 space-y-2 text-sm">
+        <ul className="mt-3 space-y-3 text-sm">
           {selectedDateBookings.length > 0 ? (
             selectedDateBookings
               .slice()
               .sort((a, b) => a.a.localeCompare(b.a))
               .map((booking) => (
-                <li key={booking.id || `${booking.date}-${booking.a}-${booking.b}`} className="rounded-r-xl border-l-4 border-sky-400 bg-sky-50 px-3 py-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-slate-800">{formatHour(booking.a)} - {formatHour(booking.b)}</p>
-                      <p className="text-sky-700">{booking.r} · {booking.t}</p>
+                <li key={booking.id || `${booking.date}-${booking.a}-${booking.b}`} className="overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white shadow-sm">
+                  <div className="flex items-stretch">
+                    <div className="flex min-w-[5.5rem] flex-col items-center justify-center bg-sky-600 px-3 py-3 text-center text-white">
+                      <FaClock className="mb-1 text-sm opacity-80" />
+                      <span className="text-sm font-bold leading-tight">{formatHour(booking.a)}</span>
+                      <span className="my-0.5 text-xs opacity-70">hasta</span>
+                      <span className="text-sm font-bold leading-tight">{formatHour(booking.b)}</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => onCancelBooking(booking.id)}
-                      className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-white px-2 py-1 text-[10px] font-medium text-sky-700 transition hover:bg-sky-50"
-                    >
-                      <FaTrashAlt className="text-[9px]" />
-                      Cancelar
-                    </button>
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-2 p-3">
+                      <div className="min-w-0">
+                        <span className="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-sky-800">
+                          {booking.owned ? 'Tu reserva' : 'No disponible'}
+                        </span>
+                        <p className="mt-1.5 break-words text-sm font-semibold leading-snug text-slate-800">
+                          {booking.r || 'Horario reservado'}
+                        </p>
+                      </div>
+                      {booking.owned && (
+                        <button
+                          type="button"
+                          onClick={() => onCancelBooking(booking.id)}
+                          aria-label="Cancelar reserva"
+                          className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 py-2 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-50"
+                        >
+                          <FaTrashAlt className="text-[10px]" />
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </li>
               ))
           ) : (
-            <li className="rounded-xl bg-emerald-50 px-3 py-2 text-emerald-700">Sin reservas: el día está libre.</li>
+            <li className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
+              Sin reservas: el día está libre.
+            </li>
           )}
         </ul>
       </div>

@@ -29,8 +29,7 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Kiro / agentes
-.agents/
+
 
 # Misc
 *.local

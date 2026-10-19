@@ -1,20 +1,37 @@
-export default function AppHeader({ userName, onLogout }) {
+export default function AppHeader({ userName, onLogout, activeView, onViewChange }) {
   return (
-    <header className="border-b border-sky-200 bg-sky-50/80">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-5">
-        <div>
-          <h1 className="text-xl font-bold sm:text-2xl text-sky-900">Agenda de Espacios</h1>
-          <p className="text-sm text-sky-700">Primero elige un salón y luego agenda tu reserva.</p>
+    <header className="sticky top-0 z-40 border-b border-white/60 bg-white/80 shadow-sm backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-3 sm:px-6">
+        <div className="min-w-fit">
+          <h1 className="text-lg font-bold text-sky-950 sm:text-xl">Agenda de Espacios</h1>
         </div>
 
-        <div className="shrink-0 text-right">
-          <p className="text-xs uppercase tracking-wide text-neutral-900">Docente</p>
-          <p className="text-sm font-bold text-slate-900">{userName}</p>
-          <button
-            type="button"
-            onClick={onLogout}
-            className="mt-1 text-xs font-bold underline text-neutral-900 hover:text-sky-900"
-          >
+        <nav aria-label="Navegación principal" className="order-3 flex w-full gap-2 overflow-x-auto sm:order-2 sm:w-auto">
+          {[
+            { id: 'agenda', label: 'Agenda' },
+            { id: 'reservations', label: 'Tus reservas' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-current={activeView === item.id ? 'page' : undefined}
+              onClick={() => onViewChange(item.id)}
+              className={[
+                'whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition',
+                activeView === item.id ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20' : 'text-slate-600 hover:bg-sky-50 hover:text-sky-800'
+              ].join(' ')}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-3 sm:order-3">
+          <div className="hidden text-right sm:block">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Docente</p>
+            <p className="max-w-48 truncate text-sm font-bold text-slate-900">{userName}</p>
+          </div>
+          <button type="button" onClick={onLogout} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700">
             Cerrar sesión
           </button>
         </div>

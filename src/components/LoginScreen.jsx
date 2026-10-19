@@ -3,6 +3,7 @@ export default function LoginScreen({
   loginError,
   onIdChange,
   onSubmit,
+  isSupabaseConfigured,
 }) {
   return (
     <section className="flex min-h-screen items-center justify-center px-4 py-10">
@@ -29,11 +30,17 @@ export default function LoginScreen({
               pattern="[0-9]*"
               autoComplete="username"
               value={professorId}
-              onChange={(e) => onIdChange(e.target.value)}
+              onChange={(event) => onIdChange(event.target.value)}
               placeholder="Ej: 1234"
               className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
             />
           </label>
+
+          {isSupabaseConfigured && (
+            <p className="rounded-xl bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-800">
+              IDs de prueba: <strong>1001</strong>, <strong>1002</strong>, <strong>1003</strong>, <strong>1004</strong> o <strong>1005</strong>
+            </p>
+          )}
 
           <p className="min-h-5 text-sm text-rose-600">{loginError}</p>
 
