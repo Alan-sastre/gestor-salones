@@ -151,7 +151,7 @@ function App() {
     };
 
     loadReservations().catch((error) => {
-      if (active) pushNotification(`Error al cargar la base de prueba: ${error.message}. Revisa que hayas ejecutado supabase/schema.sql.`, 'error');
+      if (active) pushNotification(`Error al cargar la base de prueba: ${error.message}. Verifica la configuración y el esquema de Supabase.`, 'error');
     }).finally(() => {
       if (active) setDataLoading(false);
     });
@@ -211,7 +211,7 @@ function App() {
       try {
         const { data, error } = await supabase.rpc('lookup_test_professor', { p_code: id });
         if (error) {
-          setLoginError(`No se pudo validar el ID en Supabase: ${error.message}. Ejecuta supabase/schema.sql.`);
+          setLoginError(`No se pudo validar el ID en Supabase: ${error.message}. Verifica que la base esté configurada.`);
           return;
         }
         const professor = data?.[0];

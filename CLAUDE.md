@@ -41,9 +41,6 @@ src/
 └── data/
     ├── spaces.js                    # Datos iniciales de los salones
     └── equipment.js                 # Datos iniciales de los equipos
-
-supabase/
-└── schema.sql                       # Esquema, funciones y datos de prueba
 ```
 
 ## Flujo de la aplicación
@@ -67,7 +64,7 @@ La navegación principal permite cambiar entre la agenda y **Tus reservas**. Est
 - **Disponibilidad**: el calendario y el inventario de equipos muestran disponibilidad global; la vista **Tus reservas** muestra las del docente activo.
 - **Horarios**: de 07:00 a 21:00; las reservas se validan contra la disponibilidad del recurso y el horario.
 - **Seguridad**: el acceso de demostración no es autenticación segura. Usa exclusivamente claves públicas de Supabase en el frontend y datos ficticios.
-- Consulta `README.md` para configurar Supabase y usar los docentes de prueba.
+- Consulta `README.md` para configurar la conexión con Supabase y usar los docentes disponibles en la base configurada.
 
 ## Guía para cambios
 
