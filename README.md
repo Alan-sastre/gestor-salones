@@ -53,9 +53,32 @@ Abre tu navegador en **http://localhost:5173** y ya puedes usar la aplicación.
 
 ---
 
-## Cómo ingresar
+## Base de datos de prueba y préstamos
 
-En la pantalla de login ingresa **cualquier número** (ej: `1234`) y pulsa "Ingresar". El sistema es una maqueta; no requiere credenciales reales.
+La app usa el login de ID de profesor para una demostración y guarda en Supabase los préstamos de espacios y equipos. Para preparar la base:
+
+1. En Supabase, abre **SQL Editor**, pega el contenido completo actualizado de [`supabase/schema.sql`](./supabase/schema.sql) y ejecútalo. Si habías ejecutado una versión anterior, vuelve a correr este archivo: crea las funciones de préstamos y los cinco docentes de prueba, y sincroniza el inventario con `src/data/equipment.js` (EQ-01 a EQ-04). Al hacerlo, elimina los equipos sobrantes y las reservas de prueba asociadas a equipos retirados o cuyos nombres/tipos cambiaron.
+2. Comprueba que `.env.local` en la raíz del proyecto tiene `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` o `VITE_SUPABASE_ANON_KEY`.
+3. Reinicia Vite (`Ctrl+C` y `npm run dev`) para que lea las variables.
+4. Inicia sesión con uno de estos IDs:
+
+| ID | Docente |
+|---|---|
+| 1001 | Ana Martínez |
+| 1002 | Carlos Ruiz |
+| 1003 | María López |
+| 1004 | José Hernández |
+| 1005 | Laura Gómez |
+
+El script crea algunos préstamos de muestra para dentro de 7 días. Cada ID muestra sus propios préstamos, mientras el calendario y el inventario consideran la disponibilidad global. Desde **Tus reservas**, los espacios y los equipos aparecen en secciones separadas y ordenados por fecha; se pueden editar o cancelar.
+
+**Importante:** el ID numérico no es autenticación segura. Este esquema permite llamadas de prueba con la clave pública y los datos pueden manipularse desde el navegador; úsalo solo con información ficticia en un proyecto de desarrollo. No uses datos personales o de producción. Para uso real se requiere autenticación Supabase y políticas por usuario.
+
+Las variables del frontend deben usar únicamente la clave pública `publishable`/`anon`. **Nunca uses la clave `service_role` en el navegador ni la compartas.**
+
+Para los modelos 3D, consulta `modelUrl` en `src/data/equipment.js`; los enlaces también se guardan en `equipment.model_url`.
+
+Las URLs de los modelos 3D se configuran en `src/data/equipment.js`, en el campo `modelUrl` de cada equipo. Los campos vacíos (`''`) están reservados para pegar futuras URLs de Sketchfab; al añadir una, el visor se muestra automáticamente en la tarjeta. El esquema de Supabase incluye también la columna `model_url`.
 
 ---
 
@@ -65,3 +88,4 @@ En la pantalla de login ingresa **cualquier número** (ej: `1234`) y pulsa "Ingr
 - [Vite 5](https://vitejs.dev/)
 - [Tailwind CSS 4](https://tailwindcss.com/)
 - [React Icons](https://react-icons.github.io/react-icons/)
+- [Supabase](https://supabase.com/)
