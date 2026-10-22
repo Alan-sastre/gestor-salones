@@ -92,7 +92,7 @@ function App() {
     const loadReservations = async () => {
       setDataLoading(true);
       const [spacesResult, equipmentResult, reservationsResult, availabilityResult] = await Promise.all([
-        supabase.from('spaces').select('id, name, capacity, description, features').order('id'),
+        supabase.from('spaces').select('id, name, capacity, description').order('id'),
         supabase.from('equipment')
           .select('id, name, type, description, total_units, model_url')
           .in('id', EQUIPMENT.map((item) => item.id))
@@ -104,13 +104,17 @@ function App() {
       if (failed) throw failed.error;
       if (!active) return;
 
-      const loadedSpaces = spacesResult.data.map((row) => ({
-        ...row,
-        id: Number(row.id),
-        capacidad: row.capacity,
-        desc: row.description,
-        img: SPACES.find((item) => item.id === Number(row.id))?.img || '',
-      }));
+      const loadedSpaces = spacesResult.data.map((row) => {
+        const localSpace = SPACES.find((item) => item.id === Number(row.id));
+        return {
+          ...row,
+          id: Number(row.id),
+          capacidad: row.capacity,
+          desc: row.description,
+          features: localSpace?.features || [],
+          img: localSpace?.img || '',
+        };
+      });
       const loadedEquipment = equipmentResult.data.map((row) => ({
         ...row,
         id: String(row.id),
