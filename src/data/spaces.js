@@ -6,42 +6,34 @@ import space504Image from '../../Img/504.jpeg';
 export const SPACES = [
   {
     id: 0,
-    name: 'Auditorio Principal',
-    capacidad: 30,
-    img: space501Image,
-    desc: 'Sala amplia con escenario, sonido profesional y proyector para conferencias y eventos institucionales.',
-    features: ['Escenario', 'Audio profesional', 'Proyector', 'Capacidad para 30 personas']
+    name: 'A 502 - Innova Lab',
+    capacidad: 25,
+    img: space502Image,
+    desc: 'Es un espacio colaborativo donde se generan ideas, se experimentan nuevas soluciones y se desarrollan proyectos creativos para resolver problemas, mejorar procesos y crear valor mediante la tecnología, la investigación y el trabajo en equipo.',
+    features: []
   },
   {
     id: 1,
-    name: 'Laboratorio de Cómputo',
-    capacidad: 30,
-    img: space502Image,
-    desc: '30 equipos con internet de alta velocidad y software especializado para clases prácticas.',
-    features: ['30 equipos', 'Internet alta velocidad', 'Software especializado', 'Mesas de trabajo']
+    name: 'A 504 - Crea Lab',
+    capacidad: 25,
+    img: space504Image,
+    desc: 'Es un espacio destinado a explorar nuevas ideas, desarrollar proyectos y encontrar soluciones creativas que permitan mejorar productos, servicios y procesos a través de la experimentación y la colaboración.',
+    features: []
   },
   {
     id: 2,
-    name: 'Sala de Audiovisuales',
-    capacidad: 30,
+    name: 'A 503 - Crea Lab',
+    capacidad: 25,
     img: space503Image,
-    desc: 'Pantalla grande, audio envolvente y butacas cómodas para proyecciones y presentaciones.',
-    features: ['Pantalla grande', 'Audio envolvente', 'Butacas', 'Proyección multimedia']
+    desc: 'Es un entorno que promueve la creatividad, el aprendizaje y la experimentación para identificar oportunidades, proponer ideas y desarrollar soluciones que respondan a diferentes necesidades y desafíos.',
+    features: []
   },
   {
     id: 3,
-    name: 'Biblioteca - Sala de Estudio',
-    capacidad: 30,
-    img: space504Image,
-    desc: 'Espacio silencioso con mesas grupales, tablero y acceso al catálogo de la biblioteca.',
-    features: ['Mesas grupales', 'Tablero', 'Ambiente silencioso', 'Acceso a biblioteca']
-  },
-  {
-    id: 4,
-    name: 'Laboratorio de Ciencias',
-    capacidad: 30,
-    img: '',
-    desc: 'Mesones, equipos de medición y material de seguridad para prácticas de química y biología.',
-    features: ['Mesones de trabajo', 'Equipos de medición', 'Material de seguridad', 'Prácticas científicas']
+    name: 'A 501 - Lego Bot',
+    capacidad: 25,
+    img: space501Image,
+    desc: 'Es un espacio creativo y colaborativo donde, mediante la construcción de modelos con piezas LEGO, se exploran ideas, se diseñan soluciones y se desarrollan habilidades como la creatividad, la comunicación, el pensamiento crítico y el trabajo en equipo.',
+    features: []
   },
 ];
