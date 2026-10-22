@@ -33,14 +33,14 @@ export default function SpaceDetailScreen({ space, onContinue, onBack, direction
         <h2 className="text-3xl font-bold text-slate-900 mb-3">{space.name}</h2>
         <p className="text-base text-slate-600 mb-6 leading-relaxed">{space.desc}</p>
 
-        {space.features && space.features.length > 0 && (
+        {space.features?.length > 0 && (
           <div className="mb-8">
             <h3 className="text-sm font-semibold uppercase tracking-widest text-slate-400 mb-3">Características</h3>
             <ul className="grid gap-2 sm:grid-cols-2">
-              {space.features.map((feat, i) => (
-                <li key={i} className="flex items-center gap-2 text-slate-700">
+              {space.features.map((feature, index) => (
+                <li key={index} className="flex items-center gap-2 text-slate-700">
                   <span className="flex-shrink-0 h-5 w-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">✓</span>
-                  {feat}
+                  {feature}
                 </li>
               ))}
             </ul>

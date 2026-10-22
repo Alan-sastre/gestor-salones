@@ -5,7 +5,7 @@ export default function SpaceSelector({ spaces, onSelectSpace, direction }) {
     <section className={`${animClass} rounded-3xl border border-white/70 bg-white/85 p-6 shadow-xl shadow-slate-900/5 backdrop-blur sm:p-8`}>
       <div className="mb-7">
         <p className="text-sm font-semibold uppercase tracking-[0.18em] text-sky-700">Encuentra tu espacio</p>
-        <h2 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Escoge un salón</h2>
+        <h2 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Escoge un laboratorio</h2>
         <p className="mt-2 text-base text-slate-500">Selecciona un espacio para revisar su disponibilidad y reservar.</p>
       </div>
 
