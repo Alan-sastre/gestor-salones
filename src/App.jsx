@@ -297,6 +297,7 @@ function App() {
       setReason('');
       setMessage({ text: 'Préstamo realizado con éxito.', type: 'success' });
       pushNotification('Tu préstamo de espacio quedó registrado.', 'success');
+      goToStep(4, 'forward');
       return;
     }
 
@@ -323,6 +324,7 @@ function App() {
       setReason('');
       setMessage({ text: 'Reserva registrada en esta sesión de prueba.', type: 'success' });
       pushNotification('Tu reserva de prueba quedó registrada temporalmente.', 'success');
+      goToStep(4, 'forward');
       return;
     }
 
