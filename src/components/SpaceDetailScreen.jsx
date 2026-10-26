@@ -9,7 +9,7 @@ export default function SpaceDetailScreen({ space, onContinue, onBack, direction
           <img
             src={space.img}
             alt={space.name}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
         ) : (
