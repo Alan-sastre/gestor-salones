@@ -108,14 +108,12 @@ export default function EquipmentPanel({ equipment = EQUIPMENT, selectedDay, equ
 
               <p className="text-xs text-slate-500 leading-relaxed">{eq.desc}</p>
 
-              {eq.modelUrl && (
+              {eq.img && (
                 <div className="aspect-video w-full overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
-                  <iframe
-                    title={`Modelo 3D: ${eq.name}`}
-                    src={eq.modelUrl}
-                    className="h-full w-full border-0"
-                    allow="autoplay; fullscreen; xr-spatial-tracking"
-                    allowFullScreen
+                  <img
+                    src={eq.img}
+                    alt={eq.name}
+                    className="h-full w-full object-contain"
                     loading="lazy"
                   />
                 </div>

@@ -94,7 +94,7 @@ function App() {
       const [spacesResult, equipmentResult, reservationsResult, availabilityResult] = await Promise.all([
         supabase.from('spaces').select('id, name, capacity, description').order('id'),
         supabase.from('equipment')
-          .select('id, name, type, description, total_units, model_url')
+          .select('id, name, type, description, total_units')
           .in('id', EQUIPMENT.map((item) => item.id))
           .order('id'),
         supabase.rpc('get_test_reservations', { p_professor_code: loggedProfessorCode }),
@@ -120,7 +120,6 @@ function App() {
         id: String(row.id),
         desc: row.description,
         total: row.total_units,
-        modelUrl: row.model_url || EQUIPMENT.find((item) => item.id === row.id)?.modelUrl || '',
         img: EQUIPMENT.find((item) => item.id === row.id)?.img || '',
       }));
       const ownReservations = reservationsResult.data.map((row) => ({
