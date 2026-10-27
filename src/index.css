@@ -61,20 +61,8 @@ body {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .grid-square,
-  .toast-enter {
-    animation: none;
-  }
-}
-
 button, input {
   font: inherit;
-}
-
-.transition-panel {
-  animation: panelEnter 0.45s cubic-bezier(0.2, 0.8, 0.2, 1);
-  will-change: opacity, transform;
 }
 
 .animate-fade-in {
@@ -121,19 +109,6 @@ button, input {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes panelEnter {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.985);
-    filter: blur(3px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
   }
 }
 
@@ -196,4 +171,15 @@ body {
 }
 .success-pop {
   animation: successPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

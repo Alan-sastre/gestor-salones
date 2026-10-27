@@ -18,7 +18,13 @@ export default function SpaceSelector({ spaces, onSelectSpace, direction }) {
             className="space-card group overflow-hidden rounded-3xl border border-slate-200 bg-white text-left shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-sky-300 hover:shadow-xl hover:shadow-sky-900/10 focus:outline-none focus-visible:ring-4 focus-visible:ring-sky-200 w-full"
           >
             {space.img ? (
-              <img src={space.img} alt={space.name} className="h-40 w-full object-cover" />
+              <img
+                src={space.img}
+                alt={space.name}
+                className="h-40 w-full object-cover"
+                loading="lazy"
+                decoding="async"
+              />
             ) : (
               <div className="flex h-48 flex-col items-center justify-center border-b border-dashed border-slate-200 bg-gradient-to-br from-sky-50 to-violet-50 text-slate-400 transition group-hover:from-sky-100 group-hover:to-violet-100">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">

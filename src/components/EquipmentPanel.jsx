@@ -115,6 +115,7 @@ export default function EquipmentPanel({ equipment = EQUIPMENT, selectedDay, equ
                     alt={eq.name}
                     className="h-full w-full object-contain"
                     loading="lazy"
+                    decoding="async"
                   />
                 </div>
               )}
