@@ -1,14 +1,35 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+const WELCOME_DURATION = 2000;
+const EXIT_DURATION = 350;
 
 export default function WelcomeScreen({ userName, onContinue }) {
   const [exiting, setExiting] = useState(false);
+  const continueRef = useRef(onContinue);
+  const exitTimeoutRef = useRef(null);
+  const leavingRef = useRef(false);
 
-  const handleContinue = () => {
+  useEffect(() => {
+    continueRef.current = onContinue;
+  }, [onContinue]);
+
+  const handleContinue = useCallback(() => {
+    if (leavingRef.current) return;
+    leavingRef.current = true;
     setExiting(true);
-    setTimeout(() => {
-      onContinue();
-    }, 350);
-  };
+    exitTimeoutRef.current = window.setTimeout(() => {
+      continueRef.current();
+    }, EXIT_DURATION);
+  }, []);
+
+  // La bienvenida avanza sola después de 3 segundos.
+  useEffect(() => {
+    const autoAdvance = window.setTimeout(handleContinue, WELCOME_DURATION);
+    return () => {
+      window.clearTimeout(autoAdvance);
+      if (exitTimeoutRef.current) window.clearTimeout(exitTimeoutRef.current);
+    };
+  }, [handleContinue]);
 
   return (
     <section
@@ -26,14 +47,14 @@ export default function WelcomeScreen({ userName, onContinue }) {
           ¡Bienvenido, {userName}!
         </h1>
 
-        <p className="text-slate-500 mb-8">Listo para gestionar tus reservas</p>
+        <p className="text-slate-500 mb-6">Listo para gestionar tus reservas</p>
 
         <button
           type="button"
           onClick={handleContinue}
           className="w-full rounded-xl bg-slate-900 py-2.5 font-medium text-white transition hover:bg-slate-700"
         >
-          Continuar
+          Continuar ahora
         </button>
       </div>
     </section>
