@@ -34,6 +34,7 @@ src/
 │   ├── EquipmentPanel.jsx           # Disponibilidad y reserva de equipos
 │   ├── BookingSummaryScreen.jsx     # Resumen previo a la confirmación
 │   ├── ReservationsPanel.jsx        # Edición y cancelación de reservas
+│   ├── AdminDashboard.jsx           # Estadísticas para el rol administrador
 │   ├── SuccessScreen.jsx            # Confirmación de reserva
 │   ├── AppHeader.jsx                # Navegación fija y cierre de sesión
 │   ├── NotificationCenter.jsx       # Notificaciones de acciones
@@ -46,7 +47,7 @@ src/
 ## Flujo de la aplicación
 
 ```
-Acceso → Bienvenida → Agenda
+Acceso → Bienvenida (5 s) → Agenda
   Paso 1: Selección de salón
   Paso 2: Detalle del salón
   Paso 3: Calendario y reserva del salón
@@ -55,13 +56,19 @@ Acceso → Bienvenida → Agenda
   Paso 6: Confirmación exitosa
 ```
 
-La navegación principal permite cambiar entre la agenda y **Tus reservas**. Esta vista separa los espacios de los equipos y agrupa las reservas por fecha. La función `goToStep(step, direction)` en `App.jsx` gestiona las transiciones del flujo.
+La bienvenida avanza automáticamente después de 5 segundos o al presionar **Continuar ahora**.
+
+La navegación principal permite cambiar entre **Agenda**, **Equipos** y **Tus reservas**. La vista **Equipos** permite reservar equipos sin seleccionar un laboratorio. **Tus reservas** separa los espacios de los equipos, muestra la foto de cada recurso y agrupa las reservas por fecha.
+
+El código registrado en `admin_codes` abre el rol **administrador**, que muestra un dashboard con reservas del mes, ocupación de salones, equipos prestados, reservas por escuela, docentes activos y próximas reservas. La función `goToStep(step, direction)` en `App.jsx` gestiona las transiciones del flujo.
 
 ## Comportamiento y limitaciones
 
-- **Acceso**: con Supabase configurado, valida los códigos de demostración en la base; sin configuración, acepta cualquier código numérico.
+- **Acceso**: con Supabase configurado, valida los códigos de demostración en la base. Sin configuración, acepta códigos numéricos solo para la demo local; el administrador debe existir en `admin_codes` y no se habilita localmente.
 - **Reservas**: con Supabase configurado, se consultan y guardan mediante funciones RPC. Sin Supabase, se guardan temporalmente en memoria.
-- **Disponibilidad**: el calendario y el inventario de equipos muestran disponibilidad global; la vista **Tus reservas** muestra las del docente activo.
+- **Disponibilidad**: el calendario y el inventario de equipos muestran la disponibilidad global, incluidas las reservas de otros docentes; la vista **Tus reservas** muestra las del docente activo.
+- **Equipos**: se pueden reservar desde la agenda (paso 4) o directamente en la vista **Equipos**, sin reservar un laboratorio.
+- **Administrador**: dashboard con estadísticas del mes (reservas, horas, ocupación, equipos prestados, escuelas y docentes). Requiere que el código exista en la tabla `admin_codes` y que esté disponible la función RPC `lookup_test_admin`.
 - **Horarios**: de 07:00 a 21:00; las reservas se validan contra la disponibilidad del recurso y el horario.
 - **Seguridad**: el acceso de demostración no es autenticación segura. Usa exclusivamente claves públicas de Supabase en el frontend y datos ficticios.
 - Consulta `README.md` para configurar la conexión con Supabase y usar los docentes disponibles en la base configurada.
