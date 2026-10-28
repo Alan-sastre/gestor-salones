@@ -39,6 +39,14 @@ export default function LoginScreen({
           {isSupabaseConfigured && (
             <p className="rounded-xl bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-800">
               IDs de prueba: <strong>1001</strong>, <strong>1002</strong>, <strong>1003</strong>, <strong>1004</strong> o <strong>1005</strong>
+              <br />
+              Administrador de demostración (tras ejecutar el SQL): <strong>9001</strong>
+            </p>
+          )}
+
+          {!isSupabaseConfigured && (
+            <p className="rounded-xl bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-800">
+              Modo local para docentes: usa cualquier ID numérico. El administrador requiere conexión a Supabase.
             </p>
           )}
 
