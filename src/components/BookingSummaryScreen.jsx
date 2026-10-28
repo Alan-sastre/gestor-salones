@@ -33,9 +33,10 @@ export default function BookingSummaryScreen({
     if (dayBookings.length === 0) return [];
     const eq = equipment.find((e) => e.id === equipId);
     return dayBookings.map((b) => ({
-      name: eq ? eq.name : equipId,
+      name: eq ? `${eq.name} (Salón ${eq.spaceNumber})` : equipId,
       a: b.a,
       b: b.b,
+      usability: b.r || '',
     }));
   });
 
@@ -108,8 +109,8 @@ export default function BookingSummaryScreen({
             <div className="flex items-center gap-3">
               <span className="text-2xl">📝</span>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Motivo</p>
-                <p className="text-sm font-semibold text-slate-900">{reason || <span className="text-slate-400">(sin motivo especificado)</span>}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Escuela</p>
+                <p className="text-sm font-semibold text-slate-900">{reason}</p>
               </div>
             </div>
           </div>
@@ -137,6 +138,7 @@ export default function BookingSummaryScreen({
                   {bookedEquipment.map((item, idx) => (
                     <li key={idx} className="text-sm font-semibold text-slate-900">
                       {item.name} — {item.a} – {item.b}
+                      {item.usability && <p className="mt-0.5 font-normal text-slate-500">Uso: {item.usability}</p>}
                     </li>
                   ))}
                 </ul>
