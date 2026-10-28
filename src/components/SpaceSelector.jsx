@@ -1,4 +1,4 @@
-export default function SpaceSelector({ spaces, onSelectSpace, direction }) {
+export default function SpaceSelector({ spaces, onSelectSpace, onBookEquipmentOnly, direction }) {
   const animClass = direction === 'back' ? 'step-enter-back' : 'step-enter';
 
   return (
@@ -51,6 +51,24 @@ export default function SpaceSelector({ spaces, onSelectSpace, direction }) {
           </button>
         ))}
       </div>
+
+      {onBookEquipmentOnly && (
+        <div className="mt-7 flex flex-col gap-3 rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div>
+            <p className="text-sm font-bold text-slate-900">¿Solo necesitas equipos?</p>
+            <p className="mt-0.5 text-sm text-slate-500">
+              Reserva gafas VR, impresoras, pantallas y más sin reservar un laboratorio.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onBookEquipmentOnly}
+            className="shrink-0 rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 active:scale-95"
+          >
+            Reservar equipos
+          </button>
+        </div>
+      )}
     </section>
   );
 }
