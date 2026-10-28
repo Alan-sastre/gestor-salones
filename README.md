@@ -77,11 +77,15 @@ En la navegación principal abre **Equipos**, elige la fecha y reserva el equipo
 
 Al reservar las gafas de realidad virtual, indica el uso previsto. Para guardar y consultar ese dato en Supabase, ejecuta una vez [`supabase/usabilidad-gafas.sql`](supabase/usabilidad-gafas.sql) en el SQL Editor del proyecto, después de desplegar el esquema de reservas. Si ya lo aplicaste en tu proyecto, no necesitas ejecutarlo otra vez; conserva el archivo para documentar o configurar otro proyecto.
 
+El inventario se asigna por salón: el 501 tiene LEGO y pantalla inteligente; el 502, gafas, impresora 3D y cortadora láser; el 503, LEGO y pantalla inteligente; y el 504, pantalla inteligente. Para guardar esa distribución en Supabase y añadir las unidades nuevas, ejecuta [`supabase/inventario-por-salon.sql`](supabase/inventario-por-salon.sql) en el SQL Editor. En la vista **Equipos**, selecciona el salón donde está el equipo que quieres reservar.
+
 ### Rol administrador
 
 El administrador de demostración está registrado en Supabase en la tabla `admin_codes` y se valida mediante la función `lookup_test_admin`. Inicia sesión con el código que registraste en esa tabla. Para cambiarlo, actualiza el registro directamente en Supabase.
 
 Desde el dashboard, el administrador puede asignar un salón a un docente indicando su código, fecha, horario y motivo; también puede cancelar reservas futuras y consultar las cancelaciones. Para conservar y mostrar el historial de salones cancelados, ejecuta la versión actualizada de [`supabase/usabilidad-gafas.sql`](supabase/usabilidad-gafas.sql) en el SQL Editor de Supabase. Las reservas canceladas dejan de ocupar el horario.
+
+El dashboard se actualiza al recibir cambios en reservas e inventario mediante Supabase Realtime, y sincroniza los datos cada 15 segundos como respaldo. Para habilitar los eventos en las tablas necesarias, ejecuta [`supabase/realtime-admin.sql`](supabase/realtime-admin.sql) en el SQL Editor. Si Realtime no está disponible o aún no se ha habilitado, el dashboard continúa actualizándose automáticamente con el respaldo periódico.
 
 El acceso administrador es un código de demostración almacenado en la base de datos, no un usuario de Supabase Auth ni autenticación segura. No uses este mecanismo para proteger datos reales. Sin Supabase configurado, el código **9001** no abre el dashboard. El archivo `src/data/roles.js` no se usa y se eliminó; el rol administrador se obtiene de Supabase.
 
