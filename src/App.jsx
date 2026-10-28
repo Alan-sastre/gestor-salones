@@ -15,6 +15,7 @@ import EquipmentPanel from './components/EquipmentPanel';
 import BookingSummaryScreen from './components/BookingSummaryScreen';
 import ReservationsPanel from './components/ReservationsPanel';
 import SuccessScreen from './components/SuccessScreen';
+import AdminDashboard from './components/AdminDashboard';
 
 const pad = (number) => String(number).padStart(2, '0');
 const key = (year, month, day) => `${year}-${pad(month + 1)}-${pad(day)}`;
@@ -23,6 +24,8 @@ const todayKey = key(today.getFullYear(), today.getMonth(), today.getDate());
 const START_HOUR = '07:00';
 const END_HOUR = '21:00';
 const EMPTY_BOOKINGS = [];
+const PROFESSOR_ROLE = 'professor';
+const ADMIN_ROLE = 'admin';
 
 const groupBy = (items, getKey) => items.reduce((groups, item) => {
   const itemKey = getKey(item);
@@ -30,6 +33,8 @@ const groupBy = (items, getKey) => items.reduce((groups, item) => {
   groups[itemKey].push(item);
   return groups;
 }, {});
+
+const normalizeEquipmentValue = (value) => String(value || '').trim().toLocaleLowerCase();
 
 function App() {
   const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -55,11 +60,19 @@ function App() {
   const [equipmentAvailability, setEquipmentAvailability] = useState({});
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [activeView, setActiveView] = useState('agenda');
+  const [role, setRole] = useState(PROFESSOR_ROLE);
+  const [adminReservations, setAdminReservations] = useState([]);
+  const [realtimeStatus, setRealtimeStatus] = useState('polling');
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+  const [equipmentDay, setEquipmentDay] = useState(todayKey);
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState('forward');
   const [transitioning, setTransitioning] = useState(false);
   const timeoutRef = useRef(null);
+  const realtimeRefreshTimeoutRef = useRef(null);
+  const lastLoadErrorRef = useRef('');
 
+  const isAdmin = role === ADMIN_ROLE;
   const selectedSpace = spaces.find((space) => space.id === selectedSpaceId) || null;
   const displayName = userName;
 
@@ -87,19 +100,35 @@ function App() {
       0
     ).getDate();
     const monthEnd = key(currentMonth.getFullYear(), currentMonth.getMonth(), lastDayOfMonth);
+    // El administrador consulta un rango amplio para calcular estadísticas históricas y próximas.
+    const rangeStart = isAdmin ? key(today.getFullYear() - 1, 0, 1) : monthStart;
+    const rangeEnd = isAdmin ? key(today.getFullYear() + 1, 11, 31) : monthEnd;
     const asTime = (value) => String(value).slice(0, 5);
+    const asText = (value) => (value === null || value === undefined ? '' : String(value));
 
     const loadReservations = async () => {
       setDataLoading(true);
-      const [spacesResult, equipmentResult, reservationsResult, availabilityResult] = await Promise.all([
+      const [spacesResult, equipmentResult, reservationsResult, detailsResult] = await Promise.all([
         supabase.from('spaces').select('id, name, capacity, description').order('id'),
         supabase.from('equipment')
-          .select('id, name, type, description, total_units')
+          .select('id, name, type, description, total_units, space_number')
           .in('id', EQUIPMENT.map((item) => item.id))
           .order('id'),
-        supabase.rpc('get_test_reservations', { p_professor_code: loggedProfessorCode }),
-        supabase.rpc('get_reservation_availability', { p_start_date: monthStart, p_end_date: monthEnd }),
+        isAdmin
+          ? Promise.resolve({ data: [], error: null })
+          : supabase.rpc('get_test_reservations', { p_professor_code: loggedProfessorCode }),
+        supabase.rpc('get_reservation_availability_details', { p_start_date: rangeStart, p_end_date: rangeEnd }),
       ]);
+
+      // La función con nombres de docentes es opcional: si no está desplegada, usamos la versión anterior.
+      let availabilityResult = detailsResult;
+      if (availabilityResult.error) {
+        availabilityResult = await supabase.rpc('get_reservation_availability', {
+          p_start_date: rangeStart,
+          p_end_date: rangeEnd,
+        });
+      }
+
       const failed = [spacesResult, equipmentResult, reservationsResult, availabilityResult].find((result) => result.error);
       if (failed) throw failed.error;
       if (!active) return;
@@ -115,25 +144,23 @@ function App() {
           img: localSpace?.img || '',
         };
       });
-      const loadedEquipment = equipmentResult.data.map((row) => ({
-        ...row,
-        id: String(row.id),
-        desc: row.description,
-        total: row.total_units,
-        img: EQUIPMENT.find((item) => item.id === row.id)?.img || '',
-      }));
-      const ownReservations = reservationsResult.data.map((row) => ({
-        id: row.reservation_id,
-        kind: row.resource_type,
-        resourceId: row.resource_type === 'space' ? Number(row.resource_id) : row.resource_id,
-        date: row.reservation_date,
-        a: asTime(row.start_time),
-        b: asTime(row.end_time),
-        r: row.reason || '',
-        t: userName,
-        owned: true,
-      }));
-      const availability = availabilityResult.data.map((row) => ({
+      const loadedEquipment = equipmentResult.data.map((row) => {
+        const localEquipment = EQUIPMENT.find(
+          (item) => normalizeEquipmentValue(item.id) === normalizeEquipmentValue(row.id)
+        ) || EQUIPMENT.find((item) => (
+          item.spaceNumber === Number(row.space_number)
+          && normalizeEquipmentValue(item.type) === normalizeEquipmentValue(row.type)
+        ));
+        return {
+          ...row,
+          id: String(row.id),
+          desc: row.description,
+          total: row.total_units,
+          img: localEquipment?.img || '',
+          spaceNumber: row.space_number,
+        };
+      });
+      const ownReservations = (reservationsResult.data || []).map((row) => ({
         id: row.reservation_id,
         kind: row.resource_type,
         resourceId: row.resource_type === 'space' ? Number(row.resource_id) : row.resource_id,
@@ -141,20 +168,62 @@ function App() {
         date: row.reservation_date,
         a: asTime(row.start_time),
         b: asTime(row.end_time),
-        r: row.reason || '',
-        owned: ownReservations.some((reservation) => reservation.id === row.reservation_id),
+        r: row.usability || row.reason || '',
+        usability: row.usability || row.reason || '',
+        t: userName,
+        owned: true,
       }));
+      const ownReservationIds = new Set(ownReservations.map((reservation) => reservation.id));
+      const availability = (availabilityResult.data || []).map((row) => {
+        const resourceId = row.resource_type === 'space' ? Number(row.resource_id) : row.resource_id;
+        const professorName = asText(row.professor_name || row.professor || '');
+        return {
+          id: row.reservation_id,
+          kind: row.resource_type,
+          resourceId,
+          spaceId: row.resource_type === 'space' ? resourceId : undefined,
+          date: row.reservation_date,
+          a: asTime(row.start_time),
+          b: asTime(row.end_time),
+          r: row.reason || '',
+          usability: row.resource_type === 'equipment' ? row.reason || '' : '',
+          t: professorName || 'Otro docente',
+          professorCode: asText(row.professor_code),
+          professorName,
+          status: row.status || 'confirmed',
+          owned: ownReservationIds.has(row.reservation_id),
+        };
+      });
+      const availabilityById = new Map(availability.map((reservation) => [reservation.id, reservation]));
+      ownReservations.forEach((reservation) => {
+        reservation.r ||= availabilityById.get(reservation.id)?.r || '';
+        reservation.usability ||= availabilityById.get(reservation.id)?.usability || '';
+      });
 
       setSpaces(loadedSpaces);
       setEquipment(loadedEquipment);
       setBookings(groupBy(ownReservations.filter((item) => item.kind === 'space'), (item) => item.resourceId));
       setEquipmentBookings(groupBy(ownReservations.filter((item) => item.kind === 'equipment'), (item) => item.resourceId));
-      setAvailabilityBookings(groupBy(availability.filter((item) => item.kind === 'space'), (item) => item.spaceId));
-      setEquipmentAvailability(groupBy(availability.filter((item) => item.kind === 'equipment'), (item) => item.resourceId));
+      const activeAvailability = availability.filter((item) => item.status === 'confirmed');
+      setAvailabilityBookings(groupBy(activeAvailability.filter((item) => item.kind === 'space'), (item) => item.spaceId));
+      setEquipmentAvailability(groupBy(activeAvailability.filter((item) => item.kind === 'equipment'), (item) => item.resourceId));
+      setAdminReservations(isAdmin
+        ? availability.map((item) => ({
+          ...item,
+          start: item.a,
+          end: item.b,
+          reason: item.r,
+        }))
+        : []);
+      lastLoadErrorRef.current = '';
+      setLastUpdatedAt(new Date());
     };
 
     loadReservations().catch((error) => {
-      if (active) pushNotification(`Error al cargar la base de prueba: ${error.message}. Verifica la configuración y el esquema de Supabase.`, 'error');
+      if (active && lastLoadErrorRef.current !== error.message) {
+        lastLoadErrorRef.current = error.message;
+        pushNotification(`Error al cargar la base de prueba: ${error.message}. Verifica la configuración y el esquema de Supabase.`, 'error');
+      }
     }).finally(() => {
       if (active) setDataLoading(false);
     });
@@ -162,7 +231,48 @@ function App() {
     return () => {
       active = false;
     };
-  }, [isDemoLoggedIn, loggedProfessorCode, currentMonth, refreshVersion, pushNotification, userName]);
+  }, [isDemoLoggedIn, loggedProfessorCode, currentMonth, refreshVersion, pushNotification, userName, isAdmin]);
+
+  useEffect(() => {
+    if (!isDemoLoggedIn || !isAdmin || !supabase) {
+      setRealtimeStatus('polling');
+      return undefined;
+    }
+
+    const refreshFromRealtime = () => {
+      if (realtimeRefreshTimeoutRef.current) {
+        window.clearTimeout(realtimeRefreshTimeoutRef.current);
+      }
+      realtimeRefreshTimeoutRef.current = window.setTimeout(() => {
+        setRefreshVersion((version) => version + 1);
+      }, 250);
+    };
+    const tables = ['reservations', 'equipment_reservations', 'spaces', 'equipment'];
+    const channel = supabase.channel('admin-dashboard-live');
+    tables.forEach((table) => {
+      channel.on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table },
+        refreshFromRealtime
+      );
+    });
+    channel.subscribe((status) => {
+      setRealtimeStatus(status === 'SUBSCRIBED' ? 'connected' : 'polling');
+    });
+
+    const fallbackInterval = window.setInterval(() => {
+      setRefreshVersion((version) => version + 1);
+    }, 15000);
+
+    return () => {
+      window.clearInterval(fallbackInterval);
+      if (realtimeRefreshTimeoutRef.current) {
+        window.clearTimeout(realtimeRefreshTimeoutRef.current);
+        realtimeRefreshTimeoutRef.current = null;
+      }
+      supabase.removeChannel(channel);
+    };
+  }, [isDemoLoggedIn, isAdmin, loggedProfessorCode]);
 
   useEffect(() => {
     setMessage({ text: '', type: '' });
@@ -205,35 +315,68 @@ function App() {
     setLoginError('');
     const id = professorId.trim();
     if (!id || !/^\d+$/.test(id)) {
-      setLoginError('Ingresa un código numérico válido.');
+      setLoginError('Ingresa un ID válido.');
       return;
     }
 
     let name = id;
+    let nextRole = PROFESSOR_ROLE;
+
     if (isSupabaseConfigured && supabase) {
       try {
-        const { data, error } = await supabase.rpc('lookup_test_professor', { p_code: id });
-        if (error) {
-          setLoginError(`No se pudo validar el ID en Supabase: ${error.message}. Verifica que la base esté configurada.`);
+        let account = null;
+
+        const { data: users, error: userError } = await supabase.rpc('lookup_test_user', { p_code: id });
+        if (!userError && users?.length) {
+          account = { ...users[0], role: users[0].role || PROFESSOR_ROLE };
+        }
+
+        if (!account) {
+          const { data: admins, error: adminError } = await supabase.rpc('lookup_test_admin', { p_code: id });
+          if (!adminError && admins?.length) {
+            const admin = admins[0];
+            account = {
+              ...admin,
+              role: ADMIN_ROLE,
+              name: admin.name || admin.full_name || id,
+            };
+          }
+        }
+
+        if (!account) {
+          const { data: professors, error: professorError } = await supabase.rpc('lookup_test_professor', { p_code: id });
+          if (!professorError && professors?.length) {
+            const professor = professors[0];
+            account = { ...professor, role: PROFESSOR_ROLE };
+          }
+        }
+
+        if (!account) {
+          setLoginError('ID no encontrado en la base de datos.');
           return;
         }
-        const professor = data?.[0];
-        if (!professor) {
-          setLoginError('ID no encontrado. Prueba con 1001, 1002, 1003, 1004 o 1005.');
-          return;
-        }
-        name = professor.name;
+
+        name = account.name || account.full_name || id;
+        nextRole = account.role === ADMIN_ROLE ? ADMIN_ROLE : PROFESSOR_ROLE;
       } catch (error) {
         setLoginError(`No se pudo conectar con Supabase: ${error.message}`);
         return;
       }
+    } else {
+      if (id === '9001') {
+        setLoginError('El acceso de administrador requiere configurar Supabase y registrar el código en admin_codes.');
+        return;
+      }
+      name = `Docente ${id}`;
     }
 
+    setRole(nextRole);
     setUserName(name);
     setLoggedProfessorCode(id);
     setProfessorId('');
     setIsDemoLoggedIn(true);
     setShowWelcome(true);
+    setActiveView(nextRole === ADMIN_ROLE ? 'dashboard' : 'agenda');
   };
 
   const handleContinue = () => setShowWelcome(false);
@@ -242,10 +385,13 @@ function App() {
     setIsDemoLoggedIn(false);
     setLoggedProfessorCode('');
     setUserName('');
+    setRole(PROFESSOR_ROLE);
     setBookings({});
     setEquipmentBookings({});
     setAvailabilityBookings({});
     setEquipmentAvailability({});
+    setAdminReservations([]);
+    setEquipmentDay(todayKey);
     setActiveView('agenda');
     setStep(1);
     setSelectedSpaceId(null);
@@ -266,7 +412,7 @@ function App() {
     };
     const trimmedReason = reason.trim();
     if (!trimmedReason) {
-      showBookingError('Escribe el motivo de la reserva.');
+      showBookingError('Escribe el nombre de la escuela para agendar.');
       return;
     }
     if (!startTime || !endTime || startTime >= endTime) {
@@ -293,7 +439,7 @@ function App() {
         return;
       }
       setRefreshVersion((version) => version + 1);
-      setReason('');
+      setReason(trimmedReason);
       setMessage({ text: 'Préstamo realizado con éxito.', type: 'success' });
       pushNotification('Tu préstamo de espacio quedó registrado.', 'success');
       goToStep(4, 'forward');
@@ -320,13 +466,60 @@ function App() {
         ...previous,
         [selectedSpaceId]: [...(previous[selectedSpaceId] || []), localBooking],
       }));
-      setReason('');
+      setReason(trimmedReason);
       setMessage({ text: 'Reserva registrada en esta sesión de prueba.', type: 'success' });
       pushNotification('Tu reserva de prueba quedó registrada temporalmente.', 'success');
       goToStep(4, 'forward');
       return;
     }
 
+  };
+
+  const handleAdminAssignSpace = async ({ professorCode, spaceId, date, start, end, reason: bookingReason }) => {
+    if (!professorCode.trim() || !bookingReason.trim() || !date || start < START_HOUR || end > END_HOUR || start >= end) {
+      pushNotification('Completa los datos y verifica que el horario esté entre las 07:00 y las 21:00.', 'error');
+      return false;
+    }
+
+    const { error } = await supabase.rpc('save_test_space_reservation', {
+      p_professor_code: professorCode.trim(),
+      p_id: null,
+      p_space_id: Number(spaceId),
+      p_date: date,
+      p_start: start,
+      p_end: end,
+      p_reason: bookingReason.trim(),
+    });
+    if (error) {
+      pushNotification(error.message.includes('occupied')
+        ? 'Ese horario ya está ocupado en este salón.'
+        : `No se pudo asignar el salón: ${error.message}`, 'error');
+      return false;
+    }
+
+    setRefreshVersion((version) => version + 1);
+    pushNotification('Salón asignado al docente correctamente.', 'success');
+    return true;
+  };
+
+  const handleAdminCancelSpace = async (reservation) => {
+    if (!reservation.professorCode) {
+      pushNotification('No se puede cancelar: falta el código del docente asociado a la reserva.', 'error');
+      return false;
+    }
+    const { data, error } = await supabase.rpc('cancel_test_reservation', {
+      p_professor_code: reservation.professorCode,
+      p_id: reservation.id,
+      p_resource_type: 'space',
+    });
+    if (error || !data) {
+      pushNotification(`No se pudo cancelar el salón${error ? `: ${error.message}` : '.'}`, 'error');
+      return false;
+    }
+
+    setRefreshVersion((version) => version + 1);
+    pushNotification('Reserva de salón cancelada.', 'success');
+    return true;
   };
 
   const handleCancelRoomBooking = async (bookingId) => {
@@ -346,26 +539,26 @@ function App() {
     }
 
     {
-      setBookings((previous) => ({
-        ...previous,
-        [selectedSpaceId]: (previous[selectedSpaceId] || []).filter((booking) => booking.id !== bookingId),
-      }));
-      setAvailabilityBookings((previous) => ({
-        ...previous,
-        [selectedSpaceId]: (previous[selectedSpaceId] || []).filter((booking) => booking.id !== bookingId),
-      }));
+      const filterBooking = (groups) => Object.fromEntries(
+        Object.entries(groups).map(([resourceId, items]) => [
+          resourceId,
+          items.filter((booking) => booking.id !== bookingId),
+        ])
+      );
+      setBookings(filterBooking);
+      setAvailabilityBookings(filterBooking);
       pushNotification('Reserva de prueba cancelada.', 'success');
       return true;
     }
   };
 
-  const handleBookEquipment = async (equipmentId, start, end) => {
+  const handleBookEquipment = async (equipmentId, start, end, date = selectedDay, usability = '') => {
     if (isSupabaseConfigured && supabase) {
-      const { error } = await supabase.rpc('save_test_equipment_reservation', {
+      const { data, error } = await supabase.rpc('save_test_equipment_reservation', {
         p_professor_code: loggedProfessorCode,
         p_id: null,
         p_equipment_id: equipmentId,
-        p_date: selectedDay,
+        p_date: date,
         p_start: start,
         p_end: end,
       });
@@ -373,19 +566,40 @@ function App() {
         pushNotification(error.message.includes('available') ? 'No hay unidades disponibles en ese horario.' : `No se pudo guardar el préstamo: ${error.message}`, 'error');
         return false;
       }
+      if (equipment.find((item) => item.id === equipmentId)?.type === 'Gafas') {
+        const reservationId = typeof data === 'string'
+          && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data)
+          ? data
+          : null;
+        const { error: usabilityError } = await supabase.rpc('save_test_equipment_usability', {
+          p_professor_code: loggedProfessorCode,
+          p_id: reservationId,
+          p_equipment_id: equipmentId,
+          p_date: date,
+          p_start: start,
+          p_end: end,
+          p_usability: usability.trim(),
+        });
+        if (usabilityError) {
+          setRefreshVersion((version) => version + 1);
+          pushNotification(`El préstamo se guardó, pero no se pudo guardar el uso de las gafas: ${usabilityError.message}. Puedes completar el dato desde Tus reservas.`, 'error');
+          return false;
+        }
+      }
       setRefreshVersion((version) => version + 1);
-      pushNotification(`Préstamo de equipo guardado en Supabase: ${start}–${end}.`, 'success');
+      pushNotification(`Préstamo de equipo guardado: ${start}–${end}.`, 'success');
       return true;
     }
 
     {
       const booking = {
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        date: selectedDay,
+        date,
         a: start,
         b: end,
         t: displayName,
         equipmentId,
+        r: usability,
       };
       setEquipmentBookings((previous) => ({
         ...previous,
@@ -401,6 +615,12 @@ function App() {
   };
 
   const handleUpdateReservation = async (reservation, form) => {
+    const trimmedReason = form.reason.trim();
+    if (reservation.kind === 'space' && !trimmedReason) {
+      pushNotification('La escuela es obligatoria para guardar una reserva de espacio.', 'error');
+      return false;
+    }
+
     if (!isSupabaseConfigured || !supabase) {
       if (reservation.kind === 'space') {
         const updateBookings = (groups) => {
@@ -414,7 +634,7 @@ function App() {
             date: form.date,
             a: form.start,
             b: form.end,
-            r: form.reason,
+            r: trimmedReason,
             resourceId: Number(form.resourceId),
             owned: true,
             kind: 'space',
@@ -431,6 +651,9 @@ function App() {
           date: form.date,
           a: form.start,
           b: form.end,
+          r: equipment.find((item) => item.id === form.resourceId)?.type === 'Gafas'
+            ? form.usability.trim()
+            : '',
         };
         const updateBookings = (groups) => {
           const next = Object.fromEntries(Object.entries(groups).map(([resourceId, items]) => [
@@ -457,7 +680,7 @@ function App() {
           p_date: form.date,
           p_start: form.start,
           p_end: form.end,
-          p_reason: form.reason.trim(),
+          p_reason: trimmedReason,
         }
         : {
           p_professor_code: loggedProfessorCode,
@@ -471,6 +694,23 @@ function App() {
     if (error) {
       pushNotification(`No se pudieron guardar los cambios: ${error.message}`, 'error');
       return false;
+    }
+    if (!isSpace) {
+      const { error: usabilityError } = await supabase.rpc('save_test_equipment_usability', {
+        p_professor_code: loggedProfessorCode,
+        p_id: reservation.id,
+        p_equipment_id: form.resourceId,
+        p_date: form.date,
+        p_start: form.start,
+        p_end: form.end,
+        p_usability: equipment.find((item) => item.id === form.resourceId)?.type === 'Gafas'
+          ? form.usability.trim()
+          : '',
+      });
+      if (usabilityError) {
+        pushNotification(`Se guardaron los datos de la reserva, pero no se pudo actualizar el uso de las gafas: ${usabilityError.message}`, 'error');
+        return false;
+      }
     }
     setRefreshVersion((version) => version + 1);
     pushNotification('Cambios guardados en tu reserva.', 'success');
@@ -515,6 +755,11 @@ function App() {
   };
 
   const handleConfirmBooking = () => {
+    if (!reason.trim()) {
+      pushNotification('La escuela es obligatoria para confirmar la reserva.', 'error');
+      goToStep(3, 'back');
+      return;
+    }
     pushNotification('¡Reserva confirmada exitosamente!', 'success');
     goToStep(6, 'forward');
   };
@@ -543,7 +788,7 @@ function App() {
     ...Object.values(bookings).flat().map((booking) => ({
       id: booking.id,
       kind: 'space',
-      resourceId: booking.spaceId,
+      resourceId: booking.spaceId ?? booking.resourceId,
       date: booking.date,
       start: booking.a,
       end: booking.b,
@@ -556,6 +801,7 @@ function App() {
       date: booking.date,
       start: booking.a,
       end: booking.b,
+      usability: booking.r || '',
     }))),
   ].sort((first, second) => first.date.localeCompare(second.date) || first.start.localeCompare(second.start)), [bookings, equipmentBookings]);
 
@@ -588,10 +834,23 @@ function App() {
           onLogout={handleLogout}
           activeView={activeView}
           onViewChange={setActiveView}
+          role={role}
         />
 
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-          {activeView === 'reservations' ? (
+          {isAdmin ? (
+            <AdminDashboard
+              reservations={adminReservations}
+              spaces={spaces}
+              equipment={equipment}
+              loading={dataLoading}
+              realtimeStatus={realtimeStatus}
+              lastUpdatedAt={lastUpdatedAt}
+              onRefresh={() => setRefreshVersion((version) => version + 1)}
+              onAssignSpace={handleAdminAssignSpace}
+              onCancelSpace={handleAdminCancelSpace}
+            />
+          ) : activeView === 'reservations' ? (
             <ReservationsPanel
               reservations={reservations}
               spaces={spaces}
@@ -600,11 +859,30 @@ function App() {
               onUpdate={handleUpdateReservation}
               onCancel={handleCancelReservation}
             />
+          ) : activeView === 'equipment' ? (
+            <>
+              {dataLoading && <p className="mb-4 text-xs font-medium text-slate-500">Sincronizando con Supabase…</p>}
+              <EquipmentPanel
+                equipment={equipment}
+                selectedDay={equipmentDay}
+                equipmentBookings={equipmentAvailability}
+                onBookEquipment={handleBookEquipment}
+                onDayChange={setEquipmentDay}
+                onViewReservations={() => setActiveView('reservations')}
+                isStandalone
+                direction={direction}
+              />
+            </>
           ) : (
             <>
               {dataLoading && <p className="mb-4 text-xs font-medium text-slate-500">Sincronizando con Supabase…</p>}
               {!transitioning && step === 1 && (
-                <SpaceSelector spaces={spaces} onSelectSpace={handleSelectSpace} direction={direction} />
+                <SpaceSelector
+                  spaces={spaces}
+                  onSelectSpace={handleSelectSpace}
+                  onBookEquipmentOnly={() => setActiveView('equipment')}
+                  direction={direction}
+                />
               )}
 
               {!transitioning && step === 2 && selectedSpace && (
@@ -654,14 +932,6 @@ function App() {
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                       Atrás
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => goToStep(4, 'forward')}
-                      className="flex items-center gap-2 rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 active:scale-95"
-                    >
-                      Continuar
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </button>
                   </div>
                 </div>
               )}
@@ -669,6 +939,7 @@ function App() {
               {!transitioning && step === 4 && (
                 <EquipmentPanel
                   equipment={equipment}
+                  selectedSpace={selectedSpace}
                   selectedDay={selectedDay}
                   equipmentBookings={equipmentAvailability}
                   onBookEquipment={handleBookEquipment}
