@@ -1,4 +1,4 @@
-import { FaCalendarAlt, FaClock, FaRegCalendarTimes, FaTrashAlt } from 'react-icons/fa';
+import { FaCalendarAlt, FaClock, FaRegCalendarTimes, FaTrashAlt, FaUser } from 'react-icons/fa';
 
 const HOURS = Array.from({ length: 15 }, (_, i) => 7 + i); // 07:00 a 21:00
 
@@ -78,11 +78,17 @@ export default function BookingPanel({
                     <div className="flex min-w-0 flex-1 items-center justify-between gap-2 p-3">
                       <div className="min-w-0">
                         <span className="inline-flex rounded-full bg-sky-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-sky-800">
-                          {booking.owned ? 'Tu reserva' : 'No disponible'}
+                          {booking.owned ? 'Tu reserva' : 'Otro docente'}
                         </span>
                         <p className="mt-1.5 break-words text-sm font-semibold leading-snug text-slate-800">
-                          {booking.r || 'Horario reservado'}
+                          {booking.r || (booking.owned ? 'Horario reservado' : 'Reserva de otro docente')}
                         </p>
+                        {!booking.owned && booking.t && booking.t !== 'Otro docente' && (
+                          <p className="mt-1 flex items-center gap-1 text-xs font-medium text-slate-500">
+                            <FaUser className="text-[10px]" />
+                            {booking.t}
+                          </p>
+                        )}
                       </div>
                       {booking.owned && (
                         <button
@@ -115,13 +121,17 @@ export default function BookingPanel({
 
         <div className="space-y-3 text-sm">
           <label className="block">
-            <span className="mb-1 block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">Motivo</span>
+            <span className="mb-1 block text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
+              Escuela <span className="text-rose-600">*</span>
+            </span>
             <input
               type="text"
               value={reason}
               onChange={(e) => onReasonChange(e.target.value)}
+              required
+              aria-required="true"
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none transition focus:border-sky-400 focus:ring-3 focus:ring-sky-100"
-              placeholder="Motivo / asignatura"
+              placeholder="Escribe el nombre de la escuela"
             />
           </label>
 
