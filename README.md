@@ -69,7 +69,25 @@ La app puede conectarse a un proyecto Supabase configurado por separado. El esqu
 | 1004 | José Hernández |
 | 1005 | Laura Gómez |
 
-Cada ID muestra sus propios préstamos, mientras el calendario y el inventario consideran la disponibilidad global. Desde **Tus reservas**, los espacios y los equipos aparecen en secciones separadas y ordenados por fecha; se pueden editar o cancelar.
+Cada ID muestra sus propios préstamos, mientras el calendario y el inventario consideran la disponibilidad global, incluidas las reservas de otros docentes. Desde **Tus reservas**, los espacios y los equipos aparecen con su foto, en secciones separadas y ordenados por fecha; se pueden editar o cancelar.
+
+### Reservar equipos sin salón
+
+En la navegación principal abre **Equipos**, elige la fecha y reserva el equipo que necesites. También puedes entrar desde el botón **Reservar equipos** que aparece al final de la selección de laboratorios. No es necesario reservar un salón.
+
+Al reservar las gafas de realidad virtual, indica el uso previsto. Para guardar y consultar ese dato en Supabase, ejecuta una vez [`supabase/usabilidad-gafas.sql`](supabase/usabilidad-gafas.sql) en el SQL Editor del proyecto, después de desplegar el esquema de reservas. Si ya lo aplicaste en tu proyecto, no necesitas ejecutarlo otra vez; conserva el archivo para documentar o configurar otro proyecto.
+
+### Rol administrador
+
+El administrador de demostración está registrado en Supabase en la tabla `admin_codes` y se valida mediante la función `lookup_test_admin`. Inicia sesión con el código que registraste en esa tabla. Para cambiarlo, actualiza el registro directamente en Supabase.
+
+Desde el dashboard, el administrador puede asignar un salón a un docente indicando su código, fecha, horario y motivo; también puede cancelar reservas futuras y consultar las cancelaciones. Para conservar y mostrar el historial de salones cancelados, ejecuta la versión actualizada de [`supabase/usabilidad-gafas.sql`](supabase/usabilidad-gafas.sql) en el SQL Editor de Supabase. Las reservas canceladas dejan de ocupar el horario.
+
+El acceso administrador es un código de demostración almacenado en la base de datos, no un usuario de Supabase Auth ni autenticación segura. No uses este mecanismo para proteger datos reales. Sin Supabase configurado, el código **9001** no abre el dashboard. El archivo `src/data/roles.js` no se usa y se eliminó; el rol administrador se obtiene de Supabase.
+
+Para ver los nombres de los docentes en la agenda y en las estadísticas, el proyecto Supabase debe tener desplegada la función `get_reservation_availability_details`. Si no está disponible, la app usa `get_reservation_availability` y puede mostrar **Otro docente** en lugar del nombre; ese modo de compatibilidad no incluye el historial de cancelaciones.
+
+La bienvenida avanza automáticamente después de 5 segundos, sin necesidad de presionar un botón.
 
 **Importante:** el ID numérico no es autenticación segura. Este flujo de demostración permite llamadas con la clave pública y los datos pueden manipularse desde el navegador; úsalo solo con información ficticia en un proyecto de desarrollo. No uses datos personales o de producción. Para uso real se requiere autenticación Supabase y políticas por usuario.
 
