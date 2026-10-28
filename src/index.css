@@ -69,6 +69,67 @@ button, input {
   animation: fadeInUp 0.35s ease-out;
 }
 
+.admin-dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-dashboard-content > * {
+  animation: adminSectionEnter 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.admin-dashboard-content > .admin-dashboard-kpis {
+  order: 1;
+  animation-delay: 0ms;
+}
+
+.admin-dashboard-content > .admin-dashboard-analytics,
+.admin-dashboard-content > .admin-dashboard-empty {
+  order: 2;
+  animation-delay: 80ms;
+}
+
+.admin-dashboard-content > .admin-dashboard-upcoming {
+  order: 3;
+  animation-delay: 160ms;
+}
+
+.admin-dashboard-content > .admin-dashboard-assignment {
+  order: 4;
+  animation-delay: 240ms;
+}
+
+.admin-dashboard-content > .admin-dashboard-reservations {
+  order: 5;
+  animation-delay: 320ms;
+}
+
+.admin-dashboard-content > .admin-dashboard-cancelled {
+  order: 6;
+  animation-delay: 400ms;
+}
+
+.admin-dashboard-content > .grid > div {
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.admin-dashboard-content > .grid > div:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.07);
+}
+
+@keyframes adminSectionEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .space-card {
   animation: fadeInUp 0.25s ease-out;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
@@ -178,6 +239,7 @@ body {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
