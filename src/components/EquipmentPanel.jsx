@@ -20,6 +20,9 @@ const TYPE_BADGES = {
   microfono: 'bg-violet-100 text-violet-700',
   laptop: 'bg-emerald-100 text-emerald-700',
   camara: 'bg-amber-100 text-amber-700',
+  cortadora: 'bg-orange-100 text-orange-700',
+  pantalla: 'bg-teal-100 text-teal-700',
+  lego: 'bg-lime-100 text-lime-700',
 };
 const TYPE_LABELS = {
   Gafas: 'Gafas VR',
@@ -28,15 +31,53 @@ const TYPE_LABELS = {
   microfono: 'Micrófono',
   laptop: 'Laptop',
   camara: 'Cámara',
+  cortadora: 'Cortadora láser',
+  pantalla: 'Pantalla',
+  lego: 'LEGO',
 };
+const SPACE_NUMBERS = [501, 502, 503, 504];
+const getSpaceNumber = (space) => Number(String(space?.name || '').match(/\b(501|502|503|504)\b/)?.[0]) || null;
 
-export default function EquipmentPanel({ equipment = EQUIPMENT, selectedDay, equipmentBookings, onBookEquipment, onBack, onContinue, direction }) {
+export default function EquipmentPanel({
+  equipment = EQUIPMENT,
+  selectedSpace,
+  selectedDay,
+  equipmentBookings,
+  onBookEquipment,
+  onBack,
+  onContinue,
+  direction,
+  isStandalone = false,
+  onDayChange,
+  onViewReservations,
+}) {
   const [openId, setOpenId] = useState(null);
+  const [standaloneSpaceNumber, setStandaloneSpaceNumber] = useState('');
   const [bookingId, setBookingId] = useState(null);
+  const [attemptedContinue, setAttemptedContinue] = useState(false);
   const [times, setTimes] = useState(() =>
     Object.fromEntries(equipment.map((eq) => [eq.id, { start: '07:00', end: '09:00' }]))
   );
+  const [usability, setUsability] = useState({});
   const animClass = direction === 'back' ? 'step-enter-back' : 'step-enter';
+  const todayValue = (() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  })();
+  const selectedDayLabel = selectedDay
+    ? (() => {
+      const [year, month, day] = selectedDay.split('-').map(Number);
+      return new Date(year, month - 1, day).toLocaleDateString('es', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+      });
+    })()
+    : '';
+  const selectedSpaceNumber = isStandalone
+    ? Number(standaloneSpaceNumber) || null
+    : getSpaceNumber(selectedSpace);
+  const roomEquipment = equipment.filter((item) => item.spaceNumber === selectedSpaceNumber);
 
   const handleStartChange = (equipId, value) => {
     setTimes((prev) => {
@@ -53,24 +94,93 @@ export default function EquipmentPanel({ equipment = EQUIPMENT, selectedDay, equ
 
   const handleBook = async (equipId) => {
     const { start, end } = times[equipId] || { start: '07:00', end: '09:00' };
+    const equipmentItem = equipment.find((item) => item.id === equipId);
+    const equipmentUsability = usability[equipId]?.trim() || '';
     if (timeToMinutes(start) >= timeToMinutes(end)) return;
+    if (equipmentItem?.type === 'Gafas' && !equipmentUsability) return;
     setBookingId(equipId);
-    const saved = await onBookEquipment(equipId, start, end);
-    if (saved) setOpenId(null);
+    const saved = await onBookEquipment(equipId, start, end, selectedDay, equipmentUsability);
+    if (saved) {
+      setOpenId(null);
+      setUsability((previous) => ({ ...previous, [equipId]: '' }));
+    }
     setBookingId(null);
+  };
+
+  const handleContinue = () => {
+    const openEquipment = equipment.find((item) => item.id === openId);
+    if (openEquipment?.type === 'Gafas' && !usability[openId]?.trim()) {
+      setAttemptedContinue(true);
+      return;
+    }
+    onContinue?.();
   };
 
   return (
     <section className={`${animClass} rounded-3xl border border-slate-200 bg-white p-5 shadow-sm`}>
       {/* Back button removed — now in bottom nav row */}
 
-      <div className="mb-4">
-        <h2 className="text-lg font-bold text-slate-900">¿Necesitas equipos?</h2>
-        <p className="text-sm text-slate-500">Reserva equipos adicionales para tu clase</p>
-      </div>
+      {isStandalone ? (
+        <div className="mb-5 rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 to-white p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Préstamo de equipos</p>
+              <h2 className="mt-1 text-2xl font-bold text-slate-900">Agenda de equipos</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Selecciona dónde está el equipo; no necesitas reservar ese salón.
+              </p>
+            </div>
+            <label className="block shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Fecha
+              <input
+                type="date"
+                min={todayValue}
+                value={selectedDay || todayValue}
+                onChange={(event) => onDayChange?.(event.target.value)}
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 sm:w-48"
+              />
+            </label>
+            <label className="block shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Salón
+              <select
+                value={standaloneSpaceNumber}
+                onChange={(event) => {
+                  setStandaloneSpaceNumber(event.target.value);
+                  setOpenId(null);
+                }}
+                className="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-900 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 sm:w-40"
+              >
+                <option value="">Selecciona un salón</option>
+                {SPACE_NUMBERS.map((number) => (
+                  <option key={number} value={number}>Salón {number}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {selectedDayLabel && (
+            <p className="mt-3 text-sm font-medium capitalize text-slate-600">{selectedDayLabel}</p>
+          )}
+        </div>
+      ) : (
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-slate-900">¿Necesitas equipos?</h2>
+          <p className="text-sm text-slate-500">
+            Equipos disponibles para el salón {selectedSpaceNumber || 'seleccionado'}
+          </p>
+        </div>
+      )}
 
-      <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {equipment.map((eq) => {
+      {!selectedSpaceNumber ? (
+        <p className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+          Selecciona un salón para consultar sus equipos.
+        </p>
+      ) : roomEquipment.length === 0 ? (
+        <p className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+          No hay equipos registrados para el salón {selectedSpaceNumber}.
+        </p>
+      ) : (
+        <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {roomEquipment.map((eq) => {
           const isOpen = openId === eq.id;
           const { start, end } = times[eq.id] || { start: '07:00', end: '09:00' };
           const dayBookings = (equipmentBookings[eq.id] || []).filter((booking) => booking.date === selectedDay);
@@ -136,7 +246,10 @@ export default function EquipmentPanel({ equipment = EQUIPMENT, selectedDay, equ
                 {!isOpen ? (
                   <button
                     type="button"
-                    onClick={() => setOpenId(eq.id)}
+                    onClick={() => {
+                      setOpenId(eq.id);
+                      setAttemptedContinue(false);
+                    }}
                     className="w-full rounded-xl bg-sky-600 py-2 text-xs font-semibold text-white transition hover:bg-sky-700 active:scale-95"
                   >
                     Reservar
@@ -176,18 +289,45 @@ export default function EquipmentPanel({ equipment = EQUIPMENT, selectedDay, equ
                     <p className={`text-[11px] font-medium ${availableInSelectedSlot > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
                       {availableInSelectedSlot} de {eq.total} unidades disponibles en este horario
                     </p>
+                    {eq.type === 'Gafas' && (
+                      <label className="block text-xs font-semibold text-slate-600">
+                        ¿Qué uso se les va a dar? <span className="text-rose-600">(obligatorio)</span>
+                        <textarea
+                          value={usability[eq.id] || ''}
+                          onChange={(event) => setUsability((previous) => ({
+                            ...previous,
+                            [eq.id]: event.target.value,
+                          }))}
+                          maxLength={500}
+                          required
+                          aria-invalid={attemptedContinue && !usability[eq.id]?.trim()}
+                          aria-describedby={attemptedContinue ? `usability-error-${eq.id}` : undefined}
+                          rows={3}
+                          placeholder="Describe brevemente la actividad o propósito"
+                          className={`mt-1 w-full resize-y rounded-lg border bg-white px-3 py-2 text-xs font-normal text-slate-900 outline-none focus:ring-2 ${attemptedContinue && !usability[eq.id]?.trim() ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'}`}
+                        />
+                        {attemptedContinue && !usability[eq.id]?.trim() && (
+                          <span id={`usability-error-${eq.id}`} className="mt-1 block font-medium text-rose-600" role="alert">
+                            Describe el uso de las gafas antes de continuar.
+                          </span>
+                        )}
+                      </label>
+                    )}
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => handleBook(eq.id)}
-                        disabled={timeToMinutes(start) >= timeToMinutes(end) || availableInSelectedSlot === 0 || bookingId === eq.id}
+                        disabled={timeToMinutes(start) >= timeToMinutes(end) || availableInSelectedSlot === 0 || bookingId === eq.id || (eq.type === 'Gafas' && !usability[eq.id]?.trim())}
                         className="flex-1 rounded-xl bg-sky-600 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {bookingId === eq.id ? 'Guardando…' : 'Confirmar'}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setOpenId(null)}
+                        onClick={() => {
+                          setOpenId(null);
+                          setAttemptedContinue(false);
+                        }}
                         className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
                       >
                         Cancelar
@@ -198,28 +338,46 @@ export default function EquipmentPanel({ equipment = EQUIPMENT, selectedDay, equ
               </div>
             </div>
           );
-        })}
-      </div>
+          })}
+        </div>
+      )}
 
       {/* Navigation buttons */}
-      <div className="mt-6 flex gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-95"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-          Atrás
-        </button>
-        <button
-          type="button"
-          onClick={onContinue}
-          className="flex items-center gap-2 rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 active:scale-95 shadow-sm"
-        >
-          Continuar
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-        </button>
-      </div>
+      {isStandalone ? (
+        <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-slate-500">
+            Los equipos se reservan por separado y pertenecen al salón seleccionado.
+          </p>
+          {onViewReservations && (
+            <button
+              type="button"
+              onClick={onViewReservations}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 active:scale-95"
+            >
+              Ver mis reservas
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={onBack}
+            className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 active:scale-95"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            Atrás
+          </button>
+          <button
+            type="button"
+            onClick={handleContinue}
+            className="flex items-center gap-2 rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 active:scale-95 shadow-sm"
+          >
+            Continuar
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+      )}
     </section>
   );
 }
