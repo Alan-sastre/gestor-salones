@@ -108,6 +108,7 @@ function CalendarPanel({
         <div>
           <p className="text-xs uppercase tracking-wide text-slate-500">Calendario de</p>
           <h3 className="text-lg font-semibold text-slate-900">{selectedSpace.name}</h3>
+          <p className="mt-0.5 text-xs text-slate-500">Incluye las reservas de todos los docentes</p>
         </div>
 
         <div className="flex items-center gap-2">
