@@ -1,0 +1,676 @@
+import { useMemo, useState } from 'react';
+import {
+  FaBan,
+  FaCalendarAlt,
+  FaChalkboardTeacher,
+  FaClock,
+  FaLaptop,
+  FaPlus,
+  FaSyncAlt,
+  FaTools,
+  FaUniversity,
+} from 'react-icons/fa';
+
+const MAX_UPCOMING = 10;
+
+const toMinutes = (time) => {
+  const [hours, minutes] = String(time || '00:00').slice(0, 5).split(':').map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
+};
+
+const durationInHours = (reservation) => Math.max(
+  0,
+  (toMinutes(reservation.end) - toMinutes(reservation.start)) / 60
+);
+
+const formatTime = (value) => {
+  const [hoursText, minutes = '00'] = String(value || '').slice(0, 5).split(':');
+  const hour = Number.parseInt(hoursText, 10);
+  if (!Number.isFinite(hour)) return value;
+  const suffix = hour < 12 ? 'AM' : 'PM';
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${hour12}:${minutes} ${suffix}`;
+};
+
+const formatDate = (value) => {
+  const [year, month, day] = String(value).split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('es', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+};
+
+const formatLongDate = (date) => {
+  const text = date.toLocaleDateString('es', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+const todayKey = (() => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+})();
+
+function KpiCard({ icon: Icon, label, value, detail, tone }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl ${tone}`}>
+        <Icon />
+      </div>
+      <p className="text-2xl font-bold leading-none text-slate-900">{value}</p>
+      <p className="mt-1 text-sm font-semibold text-slate-700">{label}</p>
+      <p className="mt-0.5 text-xs text-slate-500">{detail}</p>
+    </div>
+  );
+}
+
+function Bar({ value, max, tone = 'bg-sky-500' }) {
+  const width = value > 0 && max > 0 ? Math.max(3, Math.round((value / max) * 100)) : 0;
+  return (
+    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+      <div className={`h-full rounded-full ${tone}`} style={{ width: `${width}%` }} />
+    </div>
+  );
+}
+
+export default function AdminDashboard({
+  reservations = [],
+  spaces = [],
+  equipment = [],
+  loading,
+  realtimeStatus,
+  lastUpdatedAt,
+  onRefresh,
+  onAssignSpace,
+  onCancelSpace,
+}) {
+  const [assignment, setAssignment] = useState({
+    professorCode: '',
+    spaceId: String(spaces[0]?.id ?? ''),
+    date: todayKey,
+    start: '07:00',
+    end: '09:00',
+    reason: '',
+  });
+  const stats = useMemo(() => {
+    const monthPrefix = todayKey.slice(0, 7);
+    const activeReservations = reservations.filter(
+      (reservation) => !reservation.status || reservation.status === 'confirmed'
+    );
+    const cancelledSpaceReservations = reservations
+      .filter((reservation) => (
+        reservation.kind === 'space'
+        && ['cancelled', 'canceled'].includes(String(reservation.status || '').toLowerCase())
+      ))
+      .sort((first, second) => second.date.localeCompare(first.date) || second.start.localeCompare(first.start));
+    const spaceReservationsForManagement = activeReservations
+      .filter((reservation) => reservation.kind === 'space' && reservation.date >= todayKey)
+      .sort((first, second) => first.date.localeCompare(second.date) || first.start.localeCompare(second.start));
+    const monthReservations = activeReservations.filter((reservation) => reservation.date?.startsWith(monthPrefix));
+    const spaceReservations = monthReservations.filter((reservation) => reservation.kind === 'space');
+    const equipmentReservations = monthReservations.filter((reservation) => reservation.kind === 'equipment');
+
+    const resolveName = (reservation) => {
+      if (reservation.kind === 'space') {
+        return spaces.find((space) => Number(space.id) === Number(reservation.resourceId))?.name || `Salón ${reservation.resourceId}`;
+      }
+      const equipmentItem = equipment.find((item) => item.id === reservation.resourceId);
+      return equipmentItem
+        ? `${equipmentItem.name} · Salón ${equipmentItem.spaceNumber}`
+        : `Equipo ${reservation.resourceId}`;
+    };
+
+    const spaceUsage = spaces.map((space) => {
+      const items = spaceReservations.filter((reservation) => Number(reservation.resourceId) === Number(space.id));
+      const hours = items.reduce((total, reservation) => total + durationInHours(reservation), 0);
+      return { space, count: items.length, hours };
+    }).sort((first, second) => second.count - first.count || second.hours - first.hours);
+
+    const equipmentUsage = equipment.map((item) => {
+      const items = equipmentReservations.filter((reservation) => reservation.resourceId === item.id);
+      return { equipment: item, count: items.length };
+    }).sort((first, second) => second.count - first.count);
+
+    const schoolMap = new Map();
+    spaceReservations.forEach((reservation) => {
+      const label = (reservation.reason || '').trim() || 'Sin escuela especificada';
+      const current = schoolMap.get(label) || { label, count: 0, hours: 0 };
+      current.count += 1;
+      current.hours += durationInHours(reservation);
+      schoolMap.set(label, current);
+    });
+    const schoolStats = [...schoolMap.values()].sort((first, second) => second.count - first.count);
+
+    const professorMap = new Map();
+    monthReservations.forEach((reservation) => {
+      const key = reservation.professorCode || reservation.professorName;
+      if (!key) return;
+      const label = reservation.professorName || reservation.professorCode;
+      const current = professorMap.get(key) || { label, count: 0, hours: 0 };
+      current.count += 1;
+      current.hours += durationInHours(reservation);
+      professorMap.set(key, current);
+    });
+    const professorStats = [...professorMap.values()].sort((first, second) => second.count - first.count);
+
+    const occupiedSpaceHours = spaceReservations.reduce(
+      (total, reservation) => total + durationInHours(reservation),
+      0
+    );
+
+    const upcomingReservations = activeReservations
+      .filter((reservation) => reservation.date >= todayKey)
+      .sort((first, second) => first.date.localeCompare(second.date) || first.start.localeCompare(second.start))
+      .map((reservation) => ({ ...reservation, resourceName: resolveName(reservation) }));
+    const upcomingSpaceReservations = upcomingReservations
+      .filter((reservation) => reservation.kind === 'space')
+      .slice(0, MAX_UPCOMING);
+    const upcomingEquipmentReservations = upcomingReservations
+      .filter((reservation) => reservation.kind === 'equipment')
+      .slice(0, MAX_UPCOMING);
+
+    return {
+      monthReservations,
+      activeReservations,
+      cancelledSpaceReservations,
+      spaceReservationsForManagement,
+      spaceReservations,
+      equipmentReservations,
+      spaceUsage,
+      equipmentUsage,
+      schoolStats,
+      professorStats,
+      occupiedSpaceHours,
+      upcomingSpaceReservations,
+      upcomingEquipmentReservations,
+    };
+  }, [reservations, spaces, equipment]);
+
+  const submitAssignment = async (event) => {
+    event.preventDefault();
+    const saved = await onAssignSpace(assignment);
+    if (saved) {
+      setAssignment((previous) => ({ ...previous, professorCode: '', reason: '' }));
+    }
+  };
+
+  const cancelSpace = async (reservation) => {
+    const resourceName = spaces.find((space) => Number(space.id) === Number(reservation.resourceId))?.name
+      || `Salón ${reservation.resourceId}`;
+    if (!window.confirm(`¿Cancelar la reserva de ${resourceName} del ${formatDate(reservation.date)}?`)) return;
+    await onCancelSpace(reservation);
+  };
+
+  const maxSchool = Math.max(1, ...stats.schoolStats.map((item) => item.count));
+  const maxSpace = Math.max(1, ...stats.spaceUsage.map((item) => item.count));
+  const maxEquipment = Math.max(1, ...stats.equipmentUsage.map((item) => item.count));
+  const maxProfessor = Math.max(1, ...stats.professorStats.map((item) => item.count));
+  const spacesInUse = stats.spaceUsage.filter((item) => item.count > 0).length;
+
+  return (
+    <section className="admin-dashboard space-y-6">
+      <div className="relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-br from-white via-white to-sky-50 p-5 shadow-xl shadow-slate-900/5 sm:p-7">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-48 w-48 rounded-full bg-sky-100/70 blur-3xl" />
+        <div>
+          <div className="relative flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-700">Panel administrativo</p>
+              <h2 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Resumen de actividad</h2>
+              <p className="mt-1 text-sm text-slate-500">{formatLongDate(new Date())}</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="rounded-full border border-sky-100 bg-white/80 px-4 py-2 text-sm font-semibold text-sky-800 shadow-sm">
+                {stats.activeReservations.length} {stats.activeReservations.length === 1 ? 'reserva activa' : 'reservas activas'}
+              </span>
+              <span className={`rounded-full border px-3 py-2 text-xs font-semibold ${
+                realtimeStatus === 'connected'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border-amber-200 bg-amber-50 text-amber-700'
+              }`}>
+                {realtimeStatus === 'connected' ? 'En vivo' : 'Sin conexión en vivo · respaldo cada 15 s'}
+              </span>
+              <button
+                type="button"
+                onClick={onRefresh}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-sky-200 hover:bg-sky-50 active:scale-95"
+              >
+                <FaSyncAlt className={loading ? 'animate-spin' : ''} />
+                Actualizar
+              </button>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-slate-400" aria-live="polite">
+            {lastUpdatedAt
+              ? `Última actualización: ${new Date(lastUpdatedAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+              : 'Esperando la primera sincronización…'}
+          </p>
+        </div>
+      </div>
+
+      <div className="admin-dashboard-content">
+          <section className="admin-dashboard-management admin-dashboard-assignment rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+        <div className="mb-4">
+          <h3 className="text-lg font-bold text-slate-900">Asignar salón a un docente</h3>
+          <p className="mt-1 text-sm text-slate-500">La asignación queda registrada como una reserva del docente.</p>
+        </div>
+        <form onSubmit={submitAssignment} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Código del docente
+            <input
+              type="text"
+              required
+              value={assignment.professorCode}
+              onChange={(event) => setAssignment({ ...assignment, professorCode: event.target.value })}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal normal-case text-slate-800"
+              placeholder="Ej. 1001"
+            />
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Salón
+            <select
+              required
+              value={assignment.spaceId}
+              onChange={(event) => setAssignment({ ...assignment, spaceId: event.target.value })}
+              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-800"
+            >
+              {spaces.map((space) => <option key={space.id} value={space.id}>{space.name}</option>)}
+            </select>
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Fecha
+            <input
+              type="date"
+              required
+              min={todayKey}
+              value={assignment.date}
+              onChange={(event) => setAssignment({ ...assignment, date: event.target.value })}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal normal-case text-slate-800"
+            />
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Hora de inicio
+            <input
+              type="time"
+              required
+              min="07:00"
+              max="20:00"
+              value={assignment.start}
+              onChange={(event) => setAssignment({ ...assignment, start: event.target.value })}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal normal-case text-slate-800"
+            />
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Hora de fin
+            <input
+              type="time"
+              required
+              min="08:00"
+              max="21:00"
+              value={assignment.end}
+              onChange={(event) => setAssignment({ ...assignment, end: event.target.value })}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal normal-case text-slate-800"
+            />
+          </label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 sm:col-span-2 lg:col-span-1">
+            Escuela o motivo
+            <input
+              type="text"
+              required
+              value={assignment.reason}
+              onChange={(event) => setAssignment({ ...assignment, reason: event.target.value })}
+              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal normal-case text-slate-800"
+              placeholder="Motivo de la reserva"
+            />
+          </label>
+          <div className="sm:col-span-2 lg:col-span-3">
+            <button
+              type="submit"
+              disabled={loading || spaces.length === 0}
+              className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <FaPlus />
+              Asignar salón
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="admin-dashboard-management admin-dashboard-reservations overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <h3 className="text-lg font-bold text-slate-900">Reservas de salones por gestionar</h3>
+          <p className="text-sm text-slate-500">Cancela desde aquí las reservas futuras de los docentes.</p>
+        </div>
+        {loading ? (
+          <p className="px-5 py-6 text-sm text-slate-500">Cargando reservas…</p>
+        ) : stats.spaceReservationsForManagement.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-slate-500">No hay reservas futuras de salones.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Fecha</th>
+                  <th className="px-5 py-3 font-semibold">Horario</th>
+                  <th className="px-5 py-3 font-semibold">Salón</th>
+                  <th className="px-5 py-3 font-semibold">Docente</th>
+                  <th className="px-5 py-3 font-semibold">Motivo</th>
+                  <th className="px-5 py-3 font-semibold">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {stats.spaceReservationsForManagement.map((reservation) => (
+                  <tr key={reservation.id}>
+                    <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">{formatDate(reservation.date)}</td>
+                    <td className="whitespace-nowrap px-5 py-3 text-slate-600">{formatTime(reservation.start)} – {formatTime(reservation.end)}</td>
+                    <td className="px-5 py-3 font-semibold text-slate-800">
+                      {spaces.find((space) => Number(space.id) === Number(reservation.resourceId))?.name || `Salón ${reservation.resourceId}`}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3 text-slate-600">{reservation.professorName || reservation.professorCode || 'Docente no identificado'}</td>
+                    <td className="px-5 py-3 text-slate-600">{reservation.reason || '—'}</td>
+                    <td className="px-5 py-3">
+                      <button
+                        type="button"
+                        disabled={loading}
+                        onClick={() => cancelSpace(reservation)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                      >
+                        <FaBan />
+                        Cancelar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="admin-dashboard-management admin-dashboard-cancelled overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm">
+        <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Salones cancelados</h3>
+            <p className="text-sm text-slate-500">Historial de reservas de salón que fueron canceladas.</p>
+          </div>
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+            {stats.cancelledSpaceReservations.length}
+          </span>
+        </div>
+        {stats.cancelledSpaceReservations.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-slate-500">
+            No hay cancelaciones disponibles. Para consultar el historial, ejecuta la versión actualizada del script de Supabase.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+              <thead className="bg-amber-50/60 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Fecha</th>
+                  <th className="px-5 py-3 font-semibold">Horario</th>
+                  <th className="px-5 py-3 font-semibold">Salón</th>
+                  <th className="px-5 py-3 font-semibold">Docente</th>
+                  <th className="px-5 py-3 font-semibold">Motivo</th>
+                  <th className="px-5 py-3 font-semibold">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {stats.cancelledSpaceReservations.map((reservation) => (
+                  <tr key={reservation.id}>
+                    <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">{formatDate(reservation.date)}</td>
+                    <td className="whitespace-nowrap px-5 py-3 text-slate-600">{formatTime(reservation.start)} – {formatTime(reservation.end)}</td>
+                    <td className="px-5 py-3 font-semibold text-slate-800">
+                      {spaces.find((space) => Number(space.id) === Number(reservation.resourceId))?.name || `Salón ${reservation.resourceId}`}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3 text-slate-600">{reservation.professorName || reservation.professorCode || 'Docente no identificado'}</td>
+                    <td className="px-5 py-3 text-slate-600">{reservation.reason || '—'}</td>
+                    <td className="px-5 py-3">
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">Cancelada</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <div className="admin-dashboard-kpis grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          icon={FaCalendarAlt}
+          label="Reservas este mes"
+          value={stats.monthReservations.length}
+          detail={`${stats.spaceReservations.length} de salón · ${stats.equipmentReservations.length} de equipos`}
+          tone="bg-sky-100 text-sky-700"
+        />
+        <KpiCard
+          icon={FaClock}
+          label="Horas de salón reservadas"
+          value={`${stats.occupiedSpaceHours} h`}
+          detail="Acumulado en el mes actual"
+          tone="bg-violet-100 text-violet-700"
+        />
+        <KpiCard
+          icon={FaTools}
+          label="Equipos prestados"
+          value={stats.equipmentReservations.length}
+          detail={`${stats.equipmentUsage.filter((item) => item.count > 0).length} de ${equipment.length} equipos con movimiento`}
+          tone="bg-amber-100 text-amber-700"
+        />
+        <KpiCard
+          icon={FaChalkboardTeacher}
+          label="Docentes activos"
+          value={stats.professorStats.length > 0 ? stats.professorStats.length : '—'}
+          detail={`${spacesInUse} de ${spaces.length} salones con reservas`}
+          tone="bg-emerald-100 text-emerald-700"
+        />
+      </div>
+
+      {stats.activeReservations.length === 0 ? (
+        <div className="admin-dashboard-empty rounded-2xl border border-dashed border-slate-300 bg-slate-50/80 p-10 text-center">
+          <FaUniversity className="mx-auto mb-3 text-3xl text-sky-500" />
+          <p className="font-semibold text-slate-800">Todavía no hay reservas registradas</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Las estadísticas aparecerán cuando los docentes reserven salones o equipos.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="admin-dashboard-analytics grid gap-6 lg:grid-cols-3">
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Reservas por escuela</h3>
+                  <p className="text-sm text-slate-500">Distribución de los salones reservados según la escuela o motivo.</p>
+                </div>
+                <FaUniversity className="text-xl text-sky-600" />
+              </div>
+              {stats.schoolStats.length === 0 ? (
+                <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Sin reservas de salón este mes.</p>
+              ) : (
+                <ul className="space-y-4">
+                  {stats.schoolStats.slice(0, 6).map((item) => (
+                    <li key={item.label}>
+                      <div className="mb-1.5 flex items-baseline justify-between gap-3">
+                        <span className="truncate text-sm font-semibold text-slate-700">{item.label}</span>
+                        <span className="shrink-0 text-xs font-semibold text-slate-500">
+                          {item.count} {item.count === 1 ? 'reserva' : 'reservas'} · {item.hours} h
+                        </span>
+                      </div>
+                      <Bar value={item.count} max={maxSchool} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+          </div>
+
+          <div className="admin-dashboard-analytics grid gap-6 lg:grid-cols-3">
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Salones más usados</h3>
+                  <p className="text-sm text-slate-500">Reservas y horas del mes</p>
+                </div>
+                <FaUniversity className="text-xl text-sky-600" />
+              </div>
+              <ul className="space-y-4">
+                {stats.spaceUsage.map(({ space, count, hours }) => (
+                  <li key={space.id} className="flex items-center gap-3">
+                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
+                      {space.img ? (
+                        <img src={space.img} alt={space.name} className="h-full w-full object-cover" loading="lazy" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-slate-300"><FaUniversity /></div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="truncate text-sm font-semibold text-slate-800">{space.name}</span>
+                        <span className="shrink-0 text-xs font-semibold text-slate-500">{count} · {hours} h</span>
+                      </div>
+                      <div className="mt-1.5"><Bar value={count} max={maxSpace} /></div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Equipos más prestados</h3>
+                  <p className="text-sm text-slate-500">Préstamos del mes</p>
+                </div>
+                <FaLaptop className="text-xl text-sky-600" />
+              </div>
+              <ul className="space-y-4">
+                {stats.equipmentUsage.map(({ equipment: item, count }) => (
+                  <li key={item.id} className="flex items-center gap-3">
+                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
+                      {item.img ? (
+                        <img src={item.img} alt={item.name} className="h-full w-full object-contain" loading="lazy" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-slate-300"><FaTools /></div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="truncate text-sm font-semibold text-slate-800">{item.name}</span>
+                        <span className="shrink-0 text-xs font-semibold text-slate-500">
+                          {count} préstamo{count === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                      <div className="mt-1.5"><Bar value={count} max={maxEquipment} tone="bg-violet-500" /></div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Docentes con más reservas</h3>
+                  <p className="text-sm text-slate-500">Actividad del mes</p>
+                </div>
+                <FaChalkboardTeacher className="text-xl text-sky-600" />
+              </div>
+              {stats.professorStats.length === 0 ? (
+                <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">Sin docentes identificados este mes.</p>
+              ) : (
+                <ul className="space-y-4">
+                  {stats.professorStats.slice(0, 6).map((item) => (
+                    <li key={item.label}>
+                      <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                        <span className="truncate text-sm font-semibold text-slate-800">{item.label}</span>
+                        <span className="shrink-0 text-xs font-semibold text-slate-500">{item.count} · {item.hours} h</span>
+                      </div>
+                      <Bar value={item.count} max={maxProfessor} tone="bg-emerald-500" />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+
+          <div className="admin-dashboard-upcoming overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Reservas próximas</h3>
+                <p className="text-sm text-slate-500">Separadas por tipo de recurso.</p>
+              </div>
+              <FaCalendarAlt className="text-xl text-sky-600" />
+            </div>
+            <div className="grid gap-5 p-5">
+              {[
+                {
+                  title: 'Reservas de salones',
+                  resourceLabel: 'Salón',
+                  reservations: stats.upcomingSpaceReservations,
+                  emptyMessage: 'No hay reservas próximas de salones.',
+                  reasonLabel: 'Escuela / motivo',
+                  getReason: (reservation) => reservation.reason || '—',
+                },
+                {
+                  title: 'Reservas de equipos',
+                  resourceLabel: 'Equipo',
+                  reservations: stats.upcomingEquipmentReservations,
+                  emptyMessage: 'No hay reservas próximas de equipos.',
+                  reasonLabel: 'Tipo',
+                  getReason: () => 'Préstamo de equipo',
+                },
+              ].map(({ title, resourceLabel, reservations: upcoming, emptyMessage, reasonLabel, getReason }) => (
+                <section key={title} className="overflow-hidden rounded-2xl border border-slate-200">
+                  <div className="border-b border-slate-100 bg-slate-50/70 px-4 py-3">
+                    <h4 className="font-semibold text-slate-800">{title}</h4>
+                  </div>
+                  {upcoming.length === 0 ? (
+                    <p className="px-4 py-6 text-center text-sm text-slate-500">{emptyMessage}</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+                        <thead className="text-xs uppercase tracking-wide text-slate-500">
+                          <tr>
+                            <th className="px-4 py-3 font-semibold">Fecha</th>
+                            <th className="px-4 py-3 font-semibold">Horario</th>
+                            <th className="px-4 py-3 font-semibold">{resourceLabel}</th>
+                            <th className="px-4 py-3 font-semibold">Docente</th>
+                            <th className="px-4 py-3 font-semibold">{reasonLabel}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {upcoming.map((reservation) => (
+                            <tr key={`${reservation.kind}-${reservation.id}`} className="hover:bg-slate-50/70">
+                              <td className="whitespace-nowrap px-4 py-3 font-medium capitalize text-slate-700">
+                                {formatDate(reservation.date)}
+                              </td>
+                              <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                                {formatTime(reservation.start)} – {formatTime(reservation.end)}
+                              </td>
+                              <td className="px-4 py-3 font-semibold text-slate-800">{reservation.resourceName}</td>
+                              <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                                {reservation.professorName || reservation.professorCode || 'Docente no identificado'}
+                              </td>
+                              <td className="px-4 py-3 text-slate-600">{getReason(reservation)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+      </div>
+    </section>
+  );
+}
