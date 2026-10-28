@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FaCalendarAlt, FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaCalendarAlt, FaEdit, FaImage, FaTrashAlt } from 'react-icons/fa';
 import { EQUIPMENT } from '../data/equipment';
 import { SPACES } from '../data/spaces';
 
@@ -53,12 +53,16 @@ export default function ReservationsPanel({
       start: reservation.start,
       end: reservation.end,
       reason: reservation.reason || '',
+      usability: reservation.usability || '',
       resourceId: String(reservation.resourceId),
     });
   };
 
   const save = async (reservation) => {
     if (!form || !form.date || form.start >= form.end) return;
+    if (reservation.kind === 'space' && !form.reason.trim()) return;
+    const selectedEquipment = equipment.find((item) => item.id === form.resourceId);
+    if (reservation.kind === 'equipment' && selectedEquipment?.type === 'Gafas' && !form.usability.trim()) return;
     const succeeded = await onUpdate(reservation, form);
     if (succeeded) {
       setEditingId(null);
@@ -110,10 +114,19 @@ export default function ReservationsPanel({
                         {items.map((reservation) => {
                           const reservationKey = `${reservation.kind}-${reservation.id}`;
                           const editing = editingId === reservationKey;
-                          const resourceOptions = reservation.kind === 'space' ? spaces : equipment;
-                          const resourceName = reservation.kind === 'space'
-                            ? spaces.find((item) => item.id === Number(reservation.resourceId))?.name
-                            : equipment.find((item) => item.id === reservation.resourceId)?.name;
+                          const resource = reservation.kind === 'space'
+                            ? spaces.find((item) => item.id === Number(reservation.resourceId))
+                            : equipment.find((item) => item.id === reservation.resourceId);
+                          const resourceOptions = reservation.kind === 'space'
+                            ? spaces
+                            : equipment.filter((item) => item.spaceNumber === resource?.spaceNumber);
+                          const resourceName = reservation.kind === 'equipment' && resource?.spaceNumber
+                            ? `${resource.name} · Salón ${resource.spaceNumber}`
+                            : resource?.name;
+                          const resourceImage = resource?.img;
+                          const resourceMeta = reservation.kind === 'space'
+                            ? (resource?.capacidad ? `Capacidad: ${resource.capacidad} personas` : null)
+                            : (resource?.total ? `${resource.total} ${resource.total === 1 ? 'unidad disponible' : 'unidades disponibles'}` : null);
 
                           return (
                             <article
@@ -130,7 +143,9 @@ export default function ReservationsPanel({
                                       className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-800"
                                     >
                                       {resourceOptions.map((item) => (
-                                        <option key={item.id} value={item.id}>{item.name}</option>
+                                        <option key={item.id} value={item.id}>
+                                          {item.name}{reservation.kind === 'equipment' && item.spaceNumber ? ` · Salón ${item.spaceNumber}` : ''}
+                                        </option>
                                       ))}
                                     </select>
                                   </label>
@@ -161,11 +176,26 @@ export default function ReservationsPanel({
                                   </div>
                                   {reservation.kind === 'space' && (
                                     <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                      Motivo
+                                      Escuela <span className="text-rose-600">*</span>
                                       <input
                                         value={form.reason}
                                         onChange={(event) => setForm({ ...form, reason: event.target.value })}
+                                        required
+                                        aria-required="true"
                                         maxLength={160}
+                                        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal normal-case text-slate-800"
+                                      />
+                                    </label>
+                                  )}
+                                  {reservation.kind === 'equipment' && equipment.find((item) => item.id === form.resourceId)?.type === 'Gafas' && (
+                                    <label className="block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                      Uso de las gafas
+                                      <textarea
+                                        value={form.usability}
+                                        onChange={(event) => setForm({ ...form, usability: event.target.value })}
+                                        maxLength={500}
+                                        required
+                                        rows={3}
                                         className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal normal-case text-slate-800"
                                       />
                                     </label>
@@ -174,7 +204,7 @@ export default function ReservationsPanel({
                                     <button
                                       type="button"
                                       onClick={() => save(reservation)}
-                                      disabled={!form.date || form.start >= form.end}
+                                      disabled={!form.date || form.start >= form.end || (reservation.kind === 'space' && !form.reason.trim())}
                                       className="flex-1 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       Guardar cambios
@@ -190,22 +220,43 @@ export default function ReservationsPanel({
                                 </div>
                               ) : (
                                 <>
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${reservation.kind === 'space' ? 'bg-sky-100 text-sky-800' : 'bg-violet-100 text-violet-800'}`}>
-                                        {reservation.kind === 'space' ? 'Espacio' : 'Equipo'}
-                                      </span>
-                                      <h3 className="mt-3 text-lg font-bold text-slate-900">
+                                  <div className="flex items-start gap-3 sm:gap-4">
+                                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-slate-50 sm:h-24 sm:w-24">
+                                      {resourceImage ? (
+                                        <img
+                                          src={resourceImage}
+                                          alt={resourceName || 'Recurso reservado'}
+                                          className={`h-full w-full ${reservation.kind === 'space' ? 'object-cover' : 'object-contain'}`}
+                                          loading="lazy"
+                                          decoding="async"
+                                        />
+                                      ) : (
+                                        <FaImage className="text-2xl text-slate-300" aria-hidden="true" />
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex flex-wrap items-start justify-between gap-2">
+                                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${reservation.kind === 'space' ? 'bg-sky-100 text-sky-800' : 'bg-violet-100 text-violet-800'}`}>
+                                          {reservation.kind === 'space' ? 'Espacio' : 'Equipo'}
+                                        </span>
+                                        <span className="whitespace-nowrap rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                                          {reservation.start} – {reservation.end}
+                                        </span>
+                                      </div>
+                                      <h3 className="mt-2 text-lg font-bold leading-tight text-slate-900">
                                         {resourceName || 'Elemento reservado'}
                                       </h3>
+                                      {resourceMeta && (
+                                        <p className="mt-1 text-xs font-medium text-slate-500">{resourceMeta}</p>
+                                      )}
+                                      {reservation.usability && (
+                                        <p className="mt-1 text-sm text-slate-500"><span className="font-semibold">Uso:</span> {reservation.usability}</p>
+                                      )}
+                                      {reservation.reason && (
+                                        <p className="mt-1 text-sm text-slate-500">{reservation.reason}</p>
+                                      )}
                                     </div>
-                                    <span className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
-                                      {reservation.start} – {reservation.end}
-                                    </span>
                                   </div>
-                                  {reservation.reason && (
-                                    <p className="mt-1 text-sm text-slate-500">{reservation.reason}</p>
-                                  )}
                                   <div className="mt-5 flex gap-2 border-t border-slate-100 pt-4">
                                     <button
                                       type="button"
