@@ -1,4 +1,16 @@
-export default function AppHeader({ userName, onLogout, activeView, onViewChange }) {
+const PROFESSOR_VIEWS = [
+  { id: 'agenda', label: 'Agenda' },
+  { id: 'equipment', label: 'Equipos' },
+  { id: 'reservations', label: 'Tus reservas' },
+];
+
+const ADMIN_VIEWS = [
+  { id: 'dashboard', label: 'Dashboard' },
+];
+
+export default function AppHeader({ userName, onLogout, activeView, onViewChange, role = 'professor' }) {
+  const views = role === 'admin' ? ADMIN_VIEWS : PROFESSOR_VIEWS;
+
   return (
     <header className="sticky top-0 z-40 border-b border-white/60 bg-white/80 shadow-sm backdrop-blur-xl">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-3 sm:px-6">
@@ -7,10 +19,7 @@ export default function AppHeader({ userName, onLogout, activeView, onViewChange
         </div>
 
         <nav aria-label="Navegación principal" className="order-3 flex w-full gap-2 overflow-x-auto sm:order-2 sm:w-auto">
-          {[
-            { id: 'agenda', label: 'Agenda' },
-            { id: 'reservations', label: 'Tus reservas' },
-          ].map((item) => (
+          {views.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -28,7 +37,9 @@ export default function AppHeader({ userName, onLogout, activeView, onViewChange
 
         <div className="ml-auto flex items-center gap-3 sm:order-3">
           <div className="hidden text-right sm:block">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Docente</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              {role === 'admin' ? 'Administrador' : 'Docente'}
+            </p>
             <p className="max-w-48 truncate text-sm font-bold text-slate-900">{userName}</p>
           </div>
           <button type="button" onClick={onLogout} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700">
