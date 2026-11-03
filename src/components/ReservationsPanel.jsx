@@ -121,7 +121,7 @@ export default function ReservationsPanel({
                             ? spaces
                             : equipment.filter((item) => item.spaceNumber === resource?.spaceNumber);
                           const resourceName = reservation.kind === 'equipment' && resource?.spaceNumber
-                            ? `${resource.name} · Salón ${resource.spaceNumber}`
+                            ? `${resource.name} · Ubicación: salón ${resource.spaceNumber}`
                             : resource?.name;
                           const resourceImage = resource?.img;
                           const resourceMeta = reservation.kind === 'space'
@@ -144,7 +144,7 @@ export default function ReservationsPanel({
                                     >
                                       {resourceOptions.map((item) => (
                                         <option key={item.id} value={item.id}>
-                                          {item.name}{reservation.kind === 'equipment' && item.spaceNumber ? ` · Salón ${item.spaceNumber}` : ''}
+                                          {item.name}{reservation.kind === 'equipment' && item.spaceNumber ? ` · Ubicación: salón ${item.spaceNumber}` : ''}
                                         </option>
                                       ))}
                                     </select>
