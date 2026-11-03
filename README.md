@@ -73,7 +73,7 @@ Cada ID muestra sus propios préstamos, mientras el calendario y el inventario c
 
 ### Reservar equipos sin salón
 
-En la navegación principal abre **Equipos**, elige la fecha y reserva el equipo que necesites. También puedes entrar desde el botón **Reservar equipos** que aparece al final de la selección de laboratorios. No es necesario reservar un salón.
+En la navegación principal abre **Equipos**, elige la fecha y reserva el equipo que necesites. También puedes entrar desde el botón **Reservar equipos** que aparece al final de la selección de laboratorios. Elige la ubicación del inventario para encontrar el equipo: esto registra únicamente el préstamo del equipo y no reserva el salón.
 
 Al reservar las gafas de realidad virtual, indica el uso previsto. Para guardar y consultar ese dato en Supabase, ejecuta una vez [`supabase/usabilidad-gafas.sql`](supabase/usabilidad-gafas.sql) en el SQL Editor del proyecto, después de desplegar el esquema de reservas. Si ya lo aplicaste en tu proyecto, no necesitas ejecutarlo otra vez; conserva el archivo para documentar o configurar otro proyecto.
 
