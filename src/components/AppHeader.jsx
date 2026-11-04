@@ -1,5 +1,5 @@
 const PROFESSOR_VIEWS = [
-  { id: 'agenda', label: 'Espacios' },
+  { id: 'agenda', label: 'Laboratorios' },
   { id: 'equipment', label: 'Equipos' },
   { id: 'reservations', label: 'Tus reservas' },
 ];
