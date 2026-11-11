@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SPACES } from './data/spaces';
 import { EQUIPMENT } from './data/equipment';
-import { isProductionBuild, isSupabaseConfigured, supabase } from './lib/supabase';
+import { isSupabaseConfigured, supabase } from './lib/supabase';
 import AnimatedGridPattern from './components/AnimatedGridPattern';
 import LoginScreen from './components/LoginScreen';
 import WelcomeScreen from './components/WelcomeScreen';
@@ -23,6 +23,7 @@ const today = new Date();
 const todayKey = key(today.getFullYear(), today.getMonth(), today.getDate());
 const START_HOUR = '07:00';
 const END_HOUR = '21:00';
+const isProductionBuild = import.meta.env.PROD;
 const EMPTY_BOOKINGS = [];
 const PROFESSOR_ROLE = 'professor';
 const ADMIN_ROLE = 'admin';
