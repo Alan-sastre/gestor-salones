@@ -61,6 +61,12 @@ La app puede conectarse a un proyecto Supabase configurado por separado. El esqu
 2. Reinicia Vite (`Ctrl+C` y `npm run dev`) para que lea las variables.
 3. En la base de datos configurada, inicia sesión con un ID de profesor válido:
 
+### Configuración en Netlify
+
+En **Site configuration → Environment variables**, agrega `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` (o `VITE_SUPABASE_ANON_KEY`) con los valores del proyecto Supabase. Después vuelve a publicar el sitio para que Vite incorpore las variables en la compilación. Usa únicamente la clave pública `publishable`/`anon`, nunca `service_role`.
+
+Si estas variables faltan en producción, el acceso queda bloqueado y la pantalla lo informa; no se permite el acceso local de demostración con cualquier ID numérico.
+
 | ID | Docente |
 |---|---|
 | 1001 | Ana Martínez |
@@ -77,7 +83,7 @@ En la navegación principal abre **Equipos**, elige la fecha y reserva el equipo
 
 Al reservar las gafas de realidad virtual, indica el uso previsto. Para guardar y consultar ese dato en Supabase, ejecuta una vez [`supabase/usabilidad-gafas.sql`](supabase/usabilidad-gafas.sql) en el SQL Editor del proyecto, después de desplegar el esquema de reservas. Si ya lo aplicaste en tu proyecto, no necesitas ejecutarlo otra vez; conserva el archivo para documentar o configurar otro proyecto.
 
-El inventario se asigna por salón: el 501 tiene LEGO y pantalla inteligente; el 502, gafas, impresora 3D y cortadora láser; el 503, LEGO y pantalla inteligente; y el 504, pantalla inteligente. Para guardar esa distribución en Supabase y añadir las unidades nuevas, ejecuta [`supabase/inventario-por-salon.sql`](supabase/inventario-por-salon.sql) en el SQL Editor. En la vista **Equipos**, selecciona el salón donde está el equipo que quieres reservar.
+El inventario se asigna por salón: el 501 tiene LEGO y pantalla inteligente; el 502, gafas, impresora 3D y cortadora láser; el 503, LEGO y pantalla inteligente; el 504, pantalla inteligente; y el Auditorio (ubicación de inventario 505), pantalla, micrófono y proyector. El Auditorio tiene capacidad para 100 personas y Varon del Sol para 30. Para guardar los dos espacios y su inventario en Supabase, ejecuta [`supabase/inventario-por-salon.sql`](supabase/inventario-por-salon.sql) en el SQL Editor. En la vista **Equipos**, selecciona el espacio donde está el equipo que quieres reservar.
 
 ### Rol administrador
 
