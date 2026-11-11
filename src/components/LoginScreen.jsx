@@ -4,6 +4,7 @@ export default function LoginScreen({
   onIdChange,
   onSubmit,
   isSupabaseConfigured,
+  isProductionBuild,
 }) {
   return (
     <section className="flex min-h-screen items-center justify-center px-4 py-10">
@@ -44,7 +45,13 @@ export default function LoginScreen({
             </p>
           )}
 
-          {!isSupabaseConfigured && (
+          {!isSupabaseConfigured && isProductionBuild && (
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
+              La base de datos no está configurada para este sitio. No se aceptarán IDs hasta configurar Supabase en Netlify y volver a publicar.
+            </p>
+          )}
+
+          {!isSupabaseConfigured && !isProductionBuild && (
             <p className="rounded-xl bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-800">
               Modo local para docentes: usa cualquier ID numérico. El administrador requiere conexión a Supabase.
             </p>
