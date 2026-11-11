@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SPACES } from './data/spaces';
 import { EQUIPMENT } from './data/equipment';
-import { isSupabaseConfigured, supabase } from './lib/supabase';
+import { isProductionBuild, isSupabaseConfigured, supabase } from './lib/supabase';
 import AnimatedGridPattern from './components/AnimatedGridPattern';
 import LoginScreen from './components/LoginScreen';
 import WelcomeScreen from './components/WelcomeScreen';
@@ -129,8 +129,7 @@ function App() {
         });
       }
 
-      const failed = [spacesResult, equipmentResult, reservationsResult, availabilityResult].find((result) => result.error);
-      if (failed) throw failed.error;
+      if (spacesResult.error) throw spacesResult.error;
       if (!active) return;
 
       const loadedSpaces = spacesResult.data.map((row) => {
@@ -141,9 +140,15 @@ function App() {
           capacidad: row.capacity,
           desc: row.description,
           features: localSpace?.features || [],
+          inventoryNumber: localSpace?.inventoryNumber,
           img: localSpace?.img || '',
         };
       });
+      setSpaces(loadedSpaces);
+
+      const failed = [equipmentResult, reservationsResult, availabilityResult].find((result) => result.error);
+      if (failed) throw failed.error;
+
       const loadedEquipment = equipmentResult.data.map((row) => {
         const localEquipment = EQUIPMENT.find(
           (item) => normalizeEquipmentValue(item.id) === normalizeEquipmentValue(row.id)
@@ -200,7 +205,6 @@ function App() {
         reservation.usability ||= availabilityById.get(reservation.id)?.usability || '';
       });
 
-      setSpaces(loadedSpaces);
       setEquipment(loadedEquipment);
       setBookings(groupBy(ownReservations.filter((item) => item.kind === 'space'), (item) => item.resourceId));
       setEquipmentBookings(groupBy(ownReservations.filter((item) => item.kind === 'equipment'), (item) => item.resourceId));
@@ -313,6 +317,11 @@ function App() {
   const handleLogin = async (event) => {
     event.preventDefault();
     setLoginError('');
+    if (isProductionBuild && !isSupabaseConfigured) {
+      setLoginError('La conexión con la base de datos no está configurada. Configura las variables de Supabase en Netlify y vuelve a publicar el sitio.');
+      return;
+    }
+
     const id = professorId.trim();
     if (!id || !/^\d+$/.test(id)) {
       setLoginError('Ingresa un ID válido.');
@@ -815,6 +824,7 @@ function App() {
           onIdChange={setProfessorId}
           onSubmit={handleLogin}
           isSupabaseConfigured={isSupabaseConfigured}
+          isProductionBuild={isProductionBuild}
         />
       </>
     );
@@ -868,6 +878,11 @@ function App() {
                 equipmentBookings={equipmentAvailability}
                 onBookEquipment={handleBookEquipment}
                 onDayChange={setEquipmentDay}
+                onViewAgenda={() => {
+                  setSelectedSpaceId(null);
+                  setStep(1);
+                  setActiveView('agenda');
+                }}
                 onViewReservations={() => setActiveView('reservations')}
                 isStandalone
                 direction={direction}
