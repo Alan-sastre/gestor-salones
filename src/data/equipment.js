@@ -37,7 +37,7 @@ export const EQUIPMENT = [
     name: 'Pantalla Inteligente',
     type: 'pantalla',
     desc: 'Pantalla inteligente con tecnología de visualización avanzada y conectividad inalámbrica.',
-    img: pantallaImage,
+                                                                                                                                                                                                                                                                   img: pantallaImage,
     total: 1,
     spaceNumber: 501,
   },

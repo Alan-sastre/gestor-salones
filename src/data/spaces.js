@@ -48,4 +48,23 @@ export const SPACES = [
       'Pantalla inteligente',
     ]
   },
+  {
+    id: 4,
+    name: 'Auditorio',
+    capacidad: 100,
+    inventoryNumber: 505,
+    desc: 'Espacio amplio para eventos, conferencias y actividades académicas.',
+    features: [
+      'Pantallas',
+      'Micrófonos',
+      'Proyector',
+    ]
+  },
+  {
+    id: 5,
+    name: 'Varon del Sol',
+    capacidad: 30,
+    desc: 'Espacio disponible para actividades académicas y reuniones.',
+    features: [],
+  },
 ];
