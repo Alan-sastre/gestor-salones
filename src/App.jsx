@@ -47,7 +47,7 @@ function App() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [userName, setUserName] = useState('');
-  const [professorId, setProfessorId] = useState('');
+  const [loginEmail, setLoginEmail] = useState('');
   const [spaces, setSpaces] = useState(SPACES);
   const [equipment, setEquipment] = useState(EQUIPMENT);
   const [reason, setReason] = useState('');
@@ -323,38 +323,38 @@ function App() {
       return;
     }
 
-    const id = professorId.trim();
-    if (!id || !/^\d+$/.test(id)) {
-      setLoginError('Ingresa un ID válido.');
+    const email = loginEmail.trim().toLocaleLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setLoginError('Ingresa un correo electrónico válido.');
       return;
     }
 
-    let name = id;
+    let name = email.split('@')[0];
     let nextRole = PROFESSOR_ROLE;
 
     if (isSupabaseConfigured && supabase) {
       try {
         let account = null;
 
-        const { data: users, error: userError } = await supabase.rpc('lookup_test_user', { p_code: id });
+        const { data: users, error: userError } = await supabase.rpc('lookup_test_user', { p_email: email });
         if (!userError && users?.length) {
           account = { ...users[0], role: users[0].role || PROFESSOR_ROLE };
         }
 
         if (!account) {
-          const { data: admins, error: adminError } = await supabase.rpc('lookup_test_admin', { p_code: id });
+          const { data: admins, error: adminError } = await supabase.rpc('lookup_test_admin', { p_email: email });
           if (!adminError && admins?.length) {
             const admin = admins[0];
             account = {
               ...admin,
               role: ADMIN_ROLE,
-              name: admin.name || admin.full_name || id,
+              name: admin.name || admin.full_name || email.split('@')[0],
             };
           }
         }
 
         if (!account) {
-          const { data: professors, error: professorError } = await supabase.rpc('lookup_test_professor', { p_code: id });
+          const { data: professors, error: professorError } = await supabase.rpc('lookup_test_professor', { p_email: email });
           if (!professorError && professors?.length) {
             const professor = professors[0];
             account = { ...professor, role: PROFESSOR_ROLE };
@@ -362,28 +362,30 @@ function App() {
         }
 
         if (!account) {
-          setLoginError('ID no encontrado en la base de datos.');
+          setLoginError('No encontramos una cuenta registrada con ese correo.');
           return;
         }
 
-        name = account.name || account.full_name || id;
+        name = account.name || account.full_name || email.split('@')[0];
         nextRole = account.role === ADMIN_ROLE ? ADMIN_ROLE : PROFESSOR_ROLE;
+        const professorCode = account.professor_code || account.code;
+        if (nextRole === PROFESSOR_ROLE && !professorCode) {
+          setLoginError('La cuenta no tiene un código interno de docente asociado. Revisa la configuración de Supabase.');
+          return;
+        }
+        setLoggedProfessorCode(professorCode || email);
       } catch (error) {
         setLoginError(`No se pudo conectar con Supabase: ${error.message}`);
         return;
       }
     } else {
-      if (id === '9001') {
-        setLoginError('El acceso de administrador requiere configurar Supabase y registrar el código en admin_codes.');
-        return;
-      }
-      name = `Docente ${id}`;
+      name = `Docente ${name}`;
+      setLoggedProfessorCode(email);
     }
 
     setRole(nextRole);
     setUserName(name);
-    setLoggedProfessorCode(id);
-    setProfessorId('');
+    setLoginEmail('');
     setIsDemoLoggedIn(true);
     setShowWelcome(true);
     setActiveView(nextRole === ADMIN_ROLE ? 'dashboard' : 'agenda');
@@ -820,9 +822,9 @@ function App() {
       <>
         <NotificationCenter notifications={notifications} onDismiss={dismissNotification} />
         <LoginScreen
-          professorId={professorId}
+          email={loginEmail}
           loginError={loginError}
-          onIdChange={setProfessorId}
+          onEmailChange={setLoginEmail}
           onSubmit={handleLogin}
           isSupabaseConfigured={isSupabaseConfigured}
           isProductionBuild={isProductionBuild}
