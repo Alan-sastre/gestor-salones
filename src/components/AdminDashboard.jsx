@@ -321,9 +321,9 @@ export default function AdminDashboard({
   };
 
   const cancelEquipment = async (reservation) => {
-    const equipmentName = equipment.find(
-      (item) => item.id === reservation.resourceId,
-    )?.name || `equipo ${reservation.resourceId}`;
+    const equipmentName =
+      equipment.find((item) => item.id === reservation.resourceId)?.name ||
+      `equipo ${reservation.resourceId}`;
     if (
       !window.confirm(
         `¿Cancelar el préstamo de ${equipmentName} del ${formatDate(reservation.date)}?`,
@@ -669,7 +669,9 @@ export default function AdminDashboard({
             </p>
           </div>
           {loading ? (
-            <p className="px-5 py-6 text-sm text-slate-500">Cargando préstamos…</p>
+            <p className="px-5 py-6 text-sm text-slate-500">
+              Cargando préstamos…
+            </p>
           ) : stats.equipmentReservationsForManagement.length === 0 ? (
             <p className="px-5 py-6 text-sm text-slate-500">
               No hay préstamos futuros de equipos para estos filtros.
@@ -688,36 +690,41 @@ export default function AdminDashboard({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {stats.equipmentReservationsForManagement.map((reservation) => (
-                    <tr key={reservation.id}>
-                      <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">
-                        {formatDate(reservation.date)}
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-3 text-slate-600">
-                        {formatTime(reservation.start)} – {formatTime(reservation.end)}
-                      </td>
-                      <td className="px-5 py-3 font-semibold text-slate-800">
-                        {reservation.resourceName}
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-3 text-slate-600">
-                        {reservation.professorName || reservation.professorEmail || "Docente no identificado"}
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">
-                        {reservation.reason || "—"}
-                      </td>
-                      <td className="px-5 py-3">
-                        <button
-                          type="button"
-                          disabled={loading}
-                          onClick={() => cancelEquipment(reservation)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
-                        >
-                          <FaBan aria-hidden="true" />
-                          Cancelar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {stats.equipmentReservationsForManagement.map(
+                    (reservation) => (
+                      <tr key={reservation.id}>
+                        <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">
+                          {formatDate(reservation.date)}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                          {formatTime(reservation.start)} –{" "}
+                          {formatTime(reservation.end)}
+                        </td>
+                        <td className="px-5 py-3 font-semibold text-slate-800">
+                          {reservation.resourceName}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                          {reservation.professorName ||
+                            reservation.professorEmail ||
+                            "Docente no identificado"}
+                        </td>
+                        <td className="px-5 py-3 text-slate-600">
+                          {reservation.reason || "—"}
+                        </td>
+                        <td className="px-5 py-3">
+                          <button
+                            type="button"
+                            disabled={loading}
+                            onClick={() => cancelEquipment(reservation)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                          >
+                            <FaBan aria-hidden="true" />
+                            Cancelar
+                          </button>
+                        </td>
+                      </tr>
+                    ),
+                  )}
                 </tbody>
               </table>
             </div>
