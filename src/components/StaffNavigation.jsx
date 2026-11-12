@@ -4,6 +4,7 @@ import {
   FaChartBar,
   FaClipboardList,
   FaDoorOpen,
+  FaTools,
   FaUserCog,
 } from "react-icons/fa";
 
@@ -14,6 +15,11 @@ const DASHBOARD_ITEMS = [
     id: "dashboard-reservations",
     label: "Reservas por gestionar",
     icon: FaClipboardList,
+  },
+  {
+    id: "dashboard-equipment-reservations",
+    label: "Préstamos de equipos",
+    icon: FaTools,
   },
   { id: "dashboard-cancelled", label: "Cancelaciones", icon: FaBan },
   { id: "dashboard-analytics", label: "Estadísticas", icon: FaChartBar },
