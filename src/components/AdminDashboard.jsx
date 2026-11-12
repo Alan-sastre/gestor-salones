@@ -1066,12 +1066,12 @@ export default function AdminDashboard({
               <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="px-5 py-3 font-semibold">Fecha</th>
-                    <th className="px-5 py-3 font-semibold">Horario</th>
-                    <th className="px-5 py-3 font-semibold">Salón</th>
-                    <th className="px-5 py-3 font-semibold">Docente</th>
-                    <th className="px-5 py-3 font-semibold">Motivo</th>
-                    <th className="px-5 py-3 font-semibold">Acciones</th>
+                    <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Fecha</th>
+                    <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Horario</th>
+                    <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Salón</th>
+                    <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Docente</th>
+                    <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Motivo</th>
+                    <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1082,29 +1082,29 @@ export default function AdminDashboard({
                     return (
                       <Fragment key={editKey}>
                         <tr>
-                          <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">
+                          <td className="whitespace-nowrap px-3 py-2 capitalize text-slate-700 sm:px-5 sm:py-3">
                             {formatDate(reservation.date)}
                           </td>
-                          <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                          <td className="whitespace-nowrap px-3 py-2 text-slate-600 sm:px-5 sm:py-3">
                             {formatTime(reservation.start)} –{" "}
                             {formatTime(reservation.end)}
                           </td>
-                          <td className="px-5 py-3 font-semibold text-slate-800">
+                          <td className="px-3 py-2 font-semibold text-slate-800 sm:px-5 sm:py-3">
                             {spaces.find(
                               (space) =>
                                 Number(space.id) ===
                                 Number(reservation.resourceId),
                             )?.name || `Salón ${reservation.resourceId}`}
                           </td>
-                          <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                          <td className="whitespace-nowrap px-3 py-2 text-slate-600 sm:px-5 sm:py-3">
                             {reservation.professorName ||
                               reservation.professorEmail ||
                               "Docente no identificado"}
                           </td>
-                          <td className="px-5 py-3 text-slate-600">
+                          <td className="px-3 py-2 text-slate-600 sm:px-5 sm:py-3">
                             {reservation.reason || "—"}
                           </td>
-                          <td className="px-5 py-3">
+                          <td className="px-3 py-2 sm:px-5 sm:py-3">
                             <div className="flex items-center gap-2">
                               <button
                                 type="button"
@@ -1117,7 +1117,7 @@ export default function AdminDashboard({
                                     beginReservationEdit(reservation);
                                   }
                                 }}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 px-2 py-1 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-50 sm:px-3 sm:py-1.5"
                               >
                                 <FaEdit aria-hidden="true" />
                                 {editing ? "Cerrar" : "Editar"}
@@ -1126,7 +1126,7 @@ export default function AdminDashboard({
                                 type="button"
                                 disabled={loading}
                                 onClick={() => cancelSpace(reservation)}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50 sm:px-3 sm:py-1.5"
                               >
                                 <FaBan aria-hidden="true" />
                                 Cancelar
@@ -1187,12 +1187,12 @@ export default function AdminDashboard({
               <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="px-5 py-3 font-semibold">Fecha</th>
-                    <th className="px-5 py-3 font-semibold">Horario</th>
-                    <th className="px-5 py-3 font-semibold">Equipo</th>
-                    <th className="px-5 py-3 font-semibold">Docente</th>
-                    <th className="px-5 py-3 font-semibold">Uso</th>
-                    <th className="px-5 py-3 font-semibold">Acciones</th>
+                    <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Fecha</th>
+                    <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Horario</th>
+                    <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Equipo</th>
+                    <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Docente</th>
+                    <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Uso</th>
+                    <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1205,25 +1205,25 @@ export default function AdminDashboard({
                       return (
                         <Fragment key={editKey}>
                           <tr>
-                            <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">
+                            <td className="whitespace-nowrap px-3 py-2 capitalize text-slate-700 sm:px-5 sm:py-3">
                               {formatDate(reservation.date)}
                             </td>
-                            <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                            <td className="whitespace-nowrap px-3 py-2 text-slate-600 sm:px-5 sm:py-3">
                               {formatTime(reservation.start)} –{" "}
                               {formatTime(reservation.end)}
                             </td>
-                            <td className="px-5 py-3 font-semibold text-slate-800">
+                            <td className="px-3 py-2 font-semibold text-slate-800 sm:px-5 sm:py-3">
                               {reservation.resourceName}
                             </td>
-                            <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                            <td className="whitespace-nowrap px-3 py-2 text-slate-600 sm:px-5 sm:py-3">
                               {reservation.professorName ||
                                 reservation.professorEmail ||
                                 "Docente no identificado"}
                             </td>
-                            <td className="px-5 py-3 text-slate-600">
+                            <td className="px-3 py-2 text-slate-600 sm:px-5 sm:py-3">
                               {reservation.reason || "—"}
                             </td>
-                            <td className="px-5 py-3">
+                            <td className="px-3 py-2 sm:px-5 sm:py-3">
                               <div className="flex items-center gap-2">
                                 <button
                                   type="button"
@@ -1236,7 +1236,7 @@ export default function AdminDashboard({
                                       beginReservationEdit(reservation);
                                     }
                                   }}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-50"
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 px-2 py-1 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-50 sm:px-3 sm:py-1.5"
                                 >
                                   <FaEdit aria-hidden="true" />
                                   {editing ? "Cerrar" : "Editar"}
@@ -1245,7 +1245,7 @@ export default function AdminDashboard({
                                   type="button"
                                   disabled={loading}
                                   onClick={() => cancelEquipment(reservation)}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-2 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50 sm:px-3 sm:py-1.5"
                                 >
                                   <FaBan aria-hidden="true" />
                                   Cancelar
@@ -1288,7 +1288,7 @@ export default function AdminDashboard({
           hidden={activeSection !== "dashboard-cancelled" || !showCancelled}
           className="admin-dashboard-management admin-dashboard-cancelled overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm"
         >
-          <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
+          <div className="flex flex-col gap-3 border-b border-amber-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <div>
               <h3 className="text-lg font-bold text-slate-900">
                 Salones cancelados
@@ -1324,12 +1324,12 @@ export default function AdminDashboard({
                 <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
                   <thead className="bg-amber-50/60 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
-                      <th className="px-5 py-3 font-semibold">Fecha</th>
-                      <th className="px-5 py-3 font-semibold">Horario</th>
-                      <th className="px-5 py-3 font-semibold">Salón</th>
-                      <th className="px-5 py-3 font-semibold">Docente</th>
-                      <th className="px-5 py-3 font-semibold">Motivo</th>
-                      <th className="px-5 py-3 font-semibold">Estado</th>
+                      <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Fecha</th>
+                      <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Horario</th>
+                      <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Salón</th>
+                      <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Docente</th>
+                      <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Motivo</th>
+                      <th className="px-3 py-2 font-semibold sm:px-5 sm:py-3">Estado</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -1340,28 +1340,28 @@ export default function AdminDashboard({
                       )
                       .map((reservation) => (
                         <tr key={reservation.id}>
-                          <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">
+                          <td className="whitespace-nowrap px-3 py-2 capitalize text-slate-700 sm:px-5 sm:py-3">
                             {formatDate(reservation.date)}
                           </td>
-                          <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                          <td className="whitespace-nowrap px-3 py-2 text-slate-600 sm:px-5 sm:py-3">
                             {formatTime(reservation.start)} –{" "}
                             {formatTime(reservation.end)}
                           </td>
-                          <td className="px-5 py-3 font-semibold text-slate-800">
+                          <td className="px-3 py-2 font-semibold text-slate-800 sm:px-5 sm:py-3">
                             {spaces.find(
                               (space) =>
                                 Number(space.id) === Number(reservation.resourceId),
                             )?.name || `Salón ${reservation.resourceId}`}
                           </td>
-                          <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                          <td className="whitespace-nowrap px-3 py-2 text-slate-600 sm:px-5 sm:py-3">
                             {reservation.professorName ||
                               reservation.professorEmail ||
                               "Docente no identificado"}
                           </td>
-                          <td className="px-5 py-3 text-slate-600">
+                          <td className="px-3 py-2 text-slate-600 sm:px-5 sm:py-3">
                             {reservation.reason || "—"}
                           </td>
-                          <td className="px-5 py-3">
+                          <td className="px-3 py-2 sm:px-5 sm:py-3">
                             <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
                               Cancelada
                             </span>
@@ -1372,7 +1372,7 @@ export default function AdminDashboard({
                 </table>
               </div>
               {stats.cancelledSpaceReservations.length > CANCELLED_PER_PAGE && (
-                <div className="flex items-center justify-between border-t border-amber-100 px-5 py-3">
+                <div className="flex flex-col items-center justify-between gap-3 border-t border-amber-100 px-4 py-3 sm:flex-row sm:px-5">
                   <p className="text-xs text-slate-500">
                     Mostrando{" "}
                     {(cancelledPage - 1) * CANCELLED_PER_PAGE + 1}–
@@ -1384,7 +1384,7 @@ export default function AdminDashboard({
                       type="button"
                       disabled={cancelledPage === 1}
                       onClick={() => setCancelledPage((p) => Math.max(1, p - 1))}
-                      className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 sm:px-2.5"
                     >
                       ‹ Anterior
                     </button>
@@ -1393,7 +1393,7 @@ export default function AdminDashboard({
                         stats.cancelledSpaceReservations.length / CANCELLED_PER_PAGE,
                       );
                       const pages = [];
-                      const maxVisible = 5;
+                      const maxVisible = 3;
                       let start = Math.max(1, cancelledPage - Math.floor(maxVisible / 2));
                       let end = Math.min(totalPages, start + maxVisible - 1);
                       if (end - start + 1 < maxVisible) {
@@ -1407,7 +1407,7 @@ export default function AdminDashboard({
                           key={page}
                           type="button"
                           onClick={() => setCancelledPage(page)}
-                          className={`min-w-[2rem] rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                          className={`min-w-[2rem] rounded-lg px-2 py-1.5 text-xs font-semibold transition sm:px-2.5 ${
                             page === cancelledPage
                               ? "bg-amber-600 text-white"
                               : "border border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -1421,7 +1421,7 @@ export default function AdminDashboard({
                       type="button"
                       disabled={cancelledPage === Math.ceil(stats.cancelledSpaceReservations.length / CANCELLED_PER_PAGE)}
                       onClick={() => setCancelledPage((p) => p + 1)}
-                      className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 sm:px-2.5"
                     >
                       Siguiente ›
                     </button>
