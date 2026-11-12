@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { FaCalendarAlt, FaClock, FaRegCalendarTimes, FaTrashAlt, FaUser } from 'react-icons/fa';
+import { EQUIPMENT } from '../data/equipment';
 
 const HOURS = Array.from({ length: 15 }, (_, i) => 7 + i); // 07:00 a 21:00
 const DAY_START = 7 * 60;
@@ -47,6 +48,8 @@ const formatFreeTime = (minutes) => {
 export default function BookingPanel({
   dayTitle,
   selectedDateBookings,
+  equipmentAvailability,
+  equipment = EQUIPMENT,
   reason,
   startTime,
   endTime,
@@ -105,6 +108,27 @@ export default function BookingPanel({
 
   const freeMinutes = Math.max(0, DAY_MINUTES - occupiedMinutes);
   const hasOthers = occupied.some((item) => !item.owned);
+
+  // Build a map of professor email -> equipment names for the selected day.
+  const equipmentByProfessor = useMemo(() => {
+    const map = new Map();
+    if (!equipmentAvailability) return map;
+    const selectedDayFromBookings = selectedDateBookings[0]?.date;
+    if (!selectedDayFromBookings) return map;
+    Object.values(equipmentAvailability).forEach((bookingList) => {
+      (bookingList || []).forEach((booking) => {
+        if (booking.date !== selectedDayFromBookings) return;
+        const eq = equipment.find((e) => e.id === booking.resourceId);
+        if (!eq) return;
+        const eqName = eq.spaceNumber ? `${eq.name} (Salón ${eq.spaceNumber})` : eq.name;
+        const email = booking.professorEmail || booking.professorName;
+        if (!email) return;
+        if (!map.has(email)) map.set(email, new Set());
+        map.get(email).add(eqName);
+      });
+    });
+    return map;
+  }, [equipmentAvailability, equipment, selectedDateBookings]);
 
   const isStartBlocked = (value) => {
     const time = toMinutes(value);
@@ -287,6 +311,12 @@ export default function BookingPanel({
                           <p className="mt-1 flex items-center gap-1 text-xs font-medium text-slate-500">
                             <FaUser className="text-[10px]" />
                             {booking.t}
+                          </p>
+                        )}
+                        {!booking.owned && booking.professorEmail && equipmentByProfessor.has(booking.professorEmail) && (
+                          <p className="mt-1 text-xs font-medium text-slate-500">
+                            <span className="mr-1">🔧</span>
+                            {Array.from(equipmentByProfessor.get(booking.professorEmail)).join(', ')}
                           </p>
                         )}
                       </div>

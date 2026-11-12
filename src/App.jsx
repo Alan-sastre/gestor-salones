@@ -1388,6 +1388,8 @@ function App() {
                     <BookingPanel
                       dayTitle={dayTitle}
                       selectedDateBookings={selectedDateBookings}
+                      equipmentAvailability={equipmentAvailability}
+                      equipment={equipment}
                       reason={reason}
                       startTime={startTime}
                       endTime={endTime}
