@@ -118,7 +118,7 @@ export default function BookingPanel({
     Object.values(equipmentAvailability).forEach((bookingList) => {
       (bookingList || []).forEach((booking) => {
         if (booking.date !== selectedDayFromBookings) return;
-        const eq = equipment.find((e) => e.id === booking.resourceId);
+        const eq = equipment.find((e) => String(e.id) === String(booking.resourceId));
         if (!eq) return;
         const eqName = eq.spaceNumber ? `${eq.name} (Salón ${eq.spaceNumber})` : eq.name;
         const email = booking.professorEmail || booking.professorName;
