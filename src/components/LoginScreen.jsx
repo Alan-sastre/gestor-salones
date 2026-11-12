@@ -11,13 +11,22 @@ export default function LoginScreen({
       <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            >
               <rect x="3" y="5" width="18" height="16" rx="2" />
               <path d="M16 3v4M8 3v4M3 10h18" />
             </svg>
           </div>
           <div>
-            <h1 className="text-xl font-bold leading-tight text-slate-900">Agenda de Espacios</h1>
+            <h1 className="text-xl font-bold leading-tight text-slate-900">
+              Agenda de Espacios
+            </h1>
             <p className="text-sm text-slate-500">Acceso para docentes</p>
           </div>
         </div>
@@ -44,13 +53,16 @@ export default function LoginScreen({
 
           {!isSupabaseConfigured && isProductionBuild && (
             <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900">
-              La base de datos no está configurada para este sitio. El acceso por correo requiere configurar Supabase en Netlify y volver a publicar.
+              La base de datos no está configurada para este sitio. El acceso
+              por correo requiere configurar Supabase en Netlify y volver a
+              publicar.
             </p>
           )}
 
           {!isSupabaseConfigured && !isProductionBuild && (
             <p className="rounded-xl bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-800">
-              Modo local de demostración: puedes usar cualquier correo válido. El administrador requiere conexión a Supabase.
+              Modo local de demostración: puedes usar cualquier correo válido.
+              El administrador requiere conexión a Supabase.
             </p>
           )}
 
