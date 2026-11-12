@@ -1166,8 +1166,8 @@ export default function AdminDashboard({
           hidden={activeSection !== "dashboard-equipment-reservations"}
           className="admin-dashboard-management overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
         >
-          <div className="border-b border-slate-100 px-5 py-4">
-            <h3 className="text-lg font-bold text-slate-900">
+          <div className="border-b border-slate-100 px-4 py-4 sm:px-5 sm:py-4">
+            <h3 className="text-base font-bold text-slate-900 sm:text-lg">
               Préstamos de equipos por gestionar
             </h3>
             <p className="text-sm text-slate-500">
