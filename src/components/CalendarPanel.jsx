@@ -1,6 +1,51 @@
 import { memo, useMemo } from 'react';
 import { FaCheck } from 'react-icons/fa';
 
+const DAY_START = 7 * 60;
+const DAY_END = 21 * 60;
+const DAY_MINUTES = DAY_END - DAY_START;
+
+const toMinutes = (value) => {
+  const [hours, minutes] = String(value || '').split(':').map(Number);
+  if (!Number.isFinite(hours)) return null;
+  return hours * 60 + (Number.isFinite(minutes) ? minutes : 0);
+};
+
+// Horas ocupadas del día, sin contar solapamientos entre reservas.
+const occupiedMinutes = (items) => {
+  const ranges = items
+    .map((booking) => [toMinutes(booking.a), toMinutes(booking.b)])
+    .filter(([start, end]) => start !== null && end !== null && end > start)
+    .map(([start, end]) => [
+      Math.min(Math.max(start, DAY_START), DAY_END),
+      Math.min(Math.max(end, DAY_START), DAY_END),
+    ])
+    .filter(([start, end]) => end > start)
+    .sort((a, b) => a[0] - b[0]);
+
+  let total = 0;
+  let currentStart = null;
+  let currentEnd = null;
+
+  ranges.forEach(([start, end]) => {
+    if (currentStart === null) {
+      currentStart = start;
+      currentEnd = end;
+      return;
+    }
+    if (start <= currentEnd) {
+      currentEnd = Math.max(currentEnd, end);
+      return;
+    }
+    total += currentEnd - currentStart;
+    currentStart = start;
+    currentEnd = end;
+  });
+
+  if (currentStart !== null) total += currentEnd - currentStart;
+  return total;
+};
+
 function CalendarPanel({
   currentMonth,
   selectedSpace,
@@ -11,12 +56,18 @@ function CalendarPanel({
   todayKey,
 }) {
   const currentMonthLabel = currentMonth.toLocaleDateString('es', { month: 'long', year: 'numeric' });
-  const bookingsByDate = useMemo(() => {
+  const statsByDate = useMemo(() => {
     const grouped = new Map();
     (bookings || []).forEach((booking) => {
-      grouped.set(booking.date, (grouped.get(booking.date) || 0) + 1);
+      const list = grouped.get(booking.date) || [];
+      list.push(booking);
+      grouped.set(booking.date, list);
     });
-    return grouped;
+    const stats = new Map();
+    grouped.forEach((list, date) => {
+      stats.set(date, { count: list.length, minutes: occupiedMinutes(list) });
+    });
+    return stats;
   }, [bookings]);
 
   const year = currentMonth.getFullYear();
@@ -30,12 +81,22 @@ function CalendarPanel({
     cells.push(<div key={`empty-${i}`} className="aspect-square rounded-2xl border border-transparent sm:h-20" />);
   }
 
+  let fullDaysInMonth = 0;
+
   for (let day = 1; day <= lastDay.getDate(); day += 1) {
     const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const bookingCount = bookingsByDate.get(dateKey) || 0;
+    const stats = statsByDate.get(dateKey) || { count: 0, minutes: 0 };
+    const bookingCount = stats.count;
     const hasBookings = bookingCount > 0;
+    const isFull = stats.minutes >= DAY_MINUTES;
+    if (isFull) fullDaysInMonth += 1;
     const isSelectedDay = dateKey === selectedDay;
     const isToday = dateKey === todayKey;
+    const statusLabel = isFull
+      ? 'sin horarios libres'
+      : hasBookings
+        ? `${bookingCount} reserva${bookingCount > 1 ? 's' : ''}`
+        : 'libre';
 
     cells.push(
       <button
@@ -43,21 +104,24 @@ function CalendarPanel({
         type="button"
         onClick={() => onDateSelect(dateKey)}
         aria-pressed={isSelectedDay}
-        title={
-          hasBookings
-            ? `${day} · ${bookingCount} reserva${bookingCount > 1 ? 's' : ''}`
-            : `${day} · libre`
-        }
-        aria-label={`${day} de ${currentMonthLabel}${hasBookings ? `, ${bookingCount} reserva${bookingCount > 1 ? 's' : ''}` : ', libre'}${isSelectedDay ? ', seleccionado' : ''}`}
+        title={`${day} · ${statusLabel}`}
+        aria-label={`${day} de ${currentMonthLabel}, ${statusLabel}${isSelectedDay ? ', seleccionado' : ''}`}
         className={[
           'group relative flex aspect-square flex-col items-center justify-center gap-1 overflow-hidden rounded-2xl border text-base transition duration-200 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 sm:h-20 sm:gap-1.5',
           isSelectedDay
-            ? `day-selected border-sky-400 ${hasBookings ? 'bg-rose-50 hover:bg-rose-100' : 'bg-sky-100 hover:bg-sky-200'} ring-2 ring-sky-100 shadow-md`
-            : hasBookings
-              ? 'border-rose-200 bg-rose-50 hover:border-rose-300 hover:bg-rose-100'
+            ? 'day-selected border-sky-400 ring-2 ring-sky-100 shadow-md'
+            : isToday
+              ? 'border-sky-200 hover:border-sky-300'
+              : isFull
+                ? 'border-slate-300'
+                : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50',
+          isFull
+            ? 'day-full'
+            : isSelectedDay
+              ? 'bg-sky-100 hover:bg-sky-200'
               : isToday
-                ? 'border-sky-200 bg-sky-50 hover:border-sky-300 hover:bg-sky-100'
-                : 'border-slate-200 bg-white hover:border-slate-400 hover:bg-slate-50',
+                ? 'bg-sky-50 hover:bg-sky-100'
+                : 'bg-white',
         ].join(' ')}
       >
         {isSelectedDay && (
@@ -70,30 +134,24 @@ function CalendarPanel({
           className={[
             'relative z-10 flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold transition duration-200',
             isSelectedDay
-              ? hasBookings
-                ? 'bg-white text-rose-800 shadow-sm'
-                : 'bg-white text-sky-900'
-              : hasBookings
-                ? 'text-rose-800 group-hover:bg-rose-200'
+              ? isFull
+                ? 'bg-white text-slate-500 shadow-sm'
+                : 'bg-white text-sky-900 shadow-sm'
+              : isFull
+                ? 'text-slate-400'
                 : 'text-slate-700 group-hover:bg-slate-100 group-hover:text-slate-900',
           ].join(' ')}
         >
           {day}
         </span>
 
-        <i
-          className={[
-            'h-2.5 w-2.5 rounded-full transition',
-            hasBookings ? 'bg-rose-500' : 'bg-emerald-500',
-            isSelectedDay ? 'ring-2 ring-white shadow-sm' : '',
-          ].join(' ')}
-        />
-
-        {hasBookings && (
-          <span className="hidden text-[10px] font-medium text-rose-700 sm:block">
+        {isFull ? (
+          <span className="hidden text-[10px] font-semibold text-slate-500 sm:block">Sin cupo</span>
+        ) : hasBookings ? (
+          <span className="hidden text-[10px] font-medium text-slate-500 sm:block">
             {bookingCount} reserva{bookingCount > 1 ? 's' : ''}
           </span>
-        )}
+        ) : null}
 
         {isToday && (
           <span className="text-[8px] font-semibold uppercase leading-none tracking-wide text-sky-500">Hoy</span>
@@ -138,12 +196,21 @@ function CalendarPanel({
 
       <div key={currentMonthLabel} className="animate-fade-in grid grid-cols-7 gap-1.5 sm:gap-2">{cells}</div>
 
-      <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500">
+      <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-slate-500">
         <span className="flex items-center gap-1">
-          <i className="inline-block h-2.5 w-2.5 rounded-full bg-sky-500" /> Seleccionado
+          <i className="inline-block h-2.5 w-2.5 rounded-full bg-sky-600" /> Seleccionado
         </span>
-        <span className="flex items-center gap-1"><i className="inline-block h-2.5 w-2.5 rounded-full bg-rose-500" /> Con reservas</span>
-        <span className="flex items-center gap-1"><i className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" /> Libre</span>
+        <span className="flex items-center gap-1">
+          <i className="inline-block h-2.5 w-2.5 rounded-full border border-sky-300 bg-sky-50" /> Hoy
+        </span>
+        {fullDaysInMonth > 0 && (
+          <span className="flex items-center gap-1">
+            <i className="day-full inline-block h-2.5 w-2.5 rounded-sm border border-slate-300" /> Sin cupo
+          </span>
+        )}
+        <span className="text-slate-400">
+          Un día con reservas todavía tiene horarios libres.
+        </span>
       </div>
     </div>
   );
