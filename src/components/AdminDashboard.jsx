@@ -104,7 +104,7 @@ export default function AdminDashboard({
   lastUpdatedAt,
   onRefresh,
   onAssignSpace,
-  onCancelSpace,
+  onCancelReservation,
 }) {
   const [assignment, setAssignment] = useState({
     professorEmail: "",
@@ -186,6 +186,21 @@ export default function AdminDashboard({
         : `Equipo ${reservation.resourceId}`;
     };
 
+    const equipmentReservationsForManagement = activeReservations
+      .filter(
+        (reservation) =>
+          reservation.kind === "equipment" && reservation.date >= todayKey,
+      )
+      .sort(
+        (first, second) =>
+          first.date.localeCompare(second.date) ||
+          first.start.localeCompare(second.start),
+      )
+      .map((reservation) => ({
+        ...reservation,
+        resourceName: resolveName(reservation),
+      }));
+
     const spaceUsage = spaces
       .map((space) => {
         const items = spaceReservations.filter(
@@ -266,6 +281,7 @@ export default function AdminDashboard({
       activeReservations,
       cancelledSpaceReservations,
       spaceReservationsForManagement,
+      equipmentReservationsForManagement,
       spaceReservations,
       equipmentReservations,
       spaceUsage,
@@ -301,7 +317,20 @@ export default function AdminDashboard({
       )
     )
       return;
-    await onCancelSpace(reservation);
+    await onCancelReservation(reservation);
+  };
+
+  const cancelEquipment = async (reservation) => {
+    const equipmentName = equipment.find(
+      (item) => item.id === reservation.resourceId,
+    )?.name || `equipo ${reservation.resourceId}`;
+    if (
+      !window.confirm(
+        `¿Cancelar el préstamo de ${equipmentName} del ${formatDate(reservation.date)}?`,
+      )
+    )
+      return;
+    await onCancelReservation(reservation);
   };
 
   const maxSchool = Math.max(1, ...stats.schoolStats.map((item) => item.count));
@@ -319,6 +348,7 @@ export default function AdminDashboard({
     "dashboard-summary": "Resumen de actividad",
     "dashboard-assign": "Asignar salón",
     "dashboard-reservations": "Reservas por gestionar",
+    "dashboard-equipment-reservations": "Préstamos de equipos",
     "dashboard-cancelled": "Cancelaciones",
     "dashboard-analytics": "Estadísticas",
     "dashboard-upcoming": "Próximas reservas",
@@ -615,6 +645,74 @@ export default function AdminDashboard({
                           className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
                         >
                           <FaBan />
+                          Cancelar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section
+          hidden={activeSection !== "dashboard-equipment-reservations"}
+          className="admin-dashboard-management overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
+        >
+          <div className="border-b border-slate-100 px-5 py-4">
+            <h3 className="text-lg font-bold text-slate-900">
+              Préstamos de equipos por gestionar
+            </h3>
+            <p className="text-sm text-slate-500">
+              Consulta y cancela los préstamos próximos de los docentes.
+            </p>
+          </div>
+          {loading ? (
+            <p className="px-5 py-6 text-sm text-slate-500">Cargando préstamos…</p>
+          ) : stats.equipmentReservationsForManagement.length === 0 ? (
+            <p className="px-5 py-6 text-sm text-slate-500">
+              No hay préstamos futuros de equipos para estos filtros.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-5 py-3 font-semibold">Fecha</th>
+                    <th className="px-5 py-3 font-semibold">Horario</th>
+                    <th className="px-5 py-3 font-semibold">Equipo</th>
+                    <th className="px-5 py-3 font-semibold">Docente</th>
+                    <th className="px-5 py-3 font-semibold">Uso</th>
+                    <th className="px-5 py-3 font-semibold">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {stats.equipmentReservationsForManagement.map((reservation) => (
+                    <tr key={reservation.id}>
+                      <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">
+                        {formatDate(reservation.date)}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                        {formatTime(reservation.start)} – {formatTime(reservation.end)}
+                      </td>
+                      <td className="px-5 py-3 font-semibold text-slate-800">
+                        {reservation.resourceName}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                        {reservation.professorName || reservation.professorEmail || "Docente no identificado"}
+                      </td>
+                      <td className="px-5 py-3 text-slate-600">
+                        {reservation.reason || "—"}
+                      </td>
+                      <td className="px-5 py-3">
+                        <button
+                          type="button"
+                          disabled={loading}
+                          onClick={() => cancelEquipment(reservation)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                        >
+                          <FaBan aria-hidden="true" />
                           Cancelar
                         </button>
                       </td>
