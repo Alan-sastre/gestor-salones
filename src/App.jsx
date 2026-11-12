@@ -672,6 +672,177 @@ function App() {
     return true;
   };
 
+  const handleAdminAssignEquipment = async ({
+    professorEmail,
+    equipmentId,
+    date,
+    start,
+    end,
+    usability = "",
+  }) => {
+    const selectedEquipment = equipment.find((item) => item.id === equipmentId);
+    if (
+      !professorEmail.trim() ||
+      !selectedEquipment ||
+      !date ||
+      start < START_HOUR ||
+      end > END_HOUR ||
+      start >= end ||
+      (selectedEquipment.type === "Gafas" && !usability.trim())
+    ) {
+      pushNotification(
+        "Completa los datos y verifica que el horario esté entre las 07:00 y las 21:00.",
+        "error",
+      );
+      return false;
+    }
+
+    const { data, error } = await supabase.rpc(
+      "save_test_equipment_reservation",
+      {
+        p_professor_email: professorEmail.trim().toLocaleLowerCase(),
+        p_id: null,
+        p_equipment_id: equipmentId,
+        p_date: date,
+        p_start: start,
+        p_end: end,
+      },
+    );
+    if (error) {
+      pushNotification(
+        error.message.includes("available")
+          ? "No hay unidades disponibles en ese horario."
+          : `No se pudo asignar el equipo: ${error.message}`,
+        "error",
+      );
+      return false;
+    }
+
+    if (selectedEquipment.type === "Gafas") {
+      const reservationId =
+        typeof data === "string" &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          data,
+        )
+          ? data
+          : null;
+      const { error: usabilityError } = await supabase.rpc(
+        "save_test_equipment_usability",
+        {
+          p_professor_email: professorEmail.trim().toLocaleLowerCase(),
+          p_id: reservationId,
+          p_equipment_id: equipmentId,
+          p_date: date,
+          p_start: start,
+          p_end: end,
+          p_usability: usability.trim(),
+        },
+      );
+      if (usabilityError) {
+        setRefreshVersion((version) => version + 1);
+        pushNotification(
+          `El equipo se asignó, pero no se pudo guardar su uso: ${usabilityError.message}. Puedes completarlo desde la edición del préstamo.`,
+          "error",
+        );
+        return true;
+      }
+    }
+
+    setRefreshVersion((version) => version + 1);
+    pushNotification("Equipo asignado al docente correctamente.", "success");
+    return true;
+  };
+
+  const handleStaffUpdateReservation = async (reservation, form) => {
+    if (!reservation.professorEmail) {
+      pushNotification(
+        "No se puede editar: falta el correo del docente asociado a la reserva.",
+        "error",
+      );
+      return false;
+    }
+    if (
+      !form.date ||
+      !form.resourceId ||
+      form.start < START_HOUR ||
+      form.end > END_HOUR ||
+      form.start >= form.end ||
+      (reservation.kind === "space" && !form.reason.trim()) ||
+      (reservation.kind === "equipment" &&
+        equipment.find((item) => item.id === form.resourceId)?.type ===
+          "Gafas" &&
+        !form.usability.trim())
+    ) {
+      pushNotification(
+        "Completa los datos y verifica que el horario esté entre las 07:00 y las 21:00.",
+        "error",
+      );
+      return false;
+    }
+
+    const isSpace = reservation.kind === "space";
+    const { error } = await supabase.rpc(
+      isSpace
+        ? "save_test_space_reservation"
+        : "save_test_equipment_reservation",
+      isSpace
+        ? {
+            p_professor_email: reservation.professorEmail,
+            p_id: reservation.id,
+            p_space_id: Number(form.resourceId),
+            p_date: form.date,
+            p_start: form.start,
+            p_end: form.end,
+            p_reason: form.reason.trim(),
+          }
+        : {
+            p_professor_email: reservation.professorEmail,
+            p_id: reservation.id,
+            p_equipment_id: form.resourceId,
+            p_date: form.date,
+            p_start: form.start,
+            p_end: form.end,
+          },
+    );
+    if (error) {
+      pushNotification(
+        `No se pudieron guardar los cambios: ${error.message}`,
+        "error",
+      );
+      return false;
+    }
+
+    if (
+      !isSpace &&
+      equipment.find((item) => item.id === form.resourceId)?.type === "Gafas"
+    ) {
+      const { error: usabilityError } = await supabase.rpc(
+        "save_test_equipment_usability",
+        {
+          p_professor_email: reservation.professorEmail,
+          p_id: reservation.id,
+          p_equipment_id: form.resourceId,
+          p_date: form.date,
+          p_start: form.start,
+          p_end: form.end,
+          p_usability: form.usability.trim(),
+        },
+      );
+      if (usabilityError) {
+        pushNotification(
+          `Se guardaron los datos del préstamo, pero no se pudo guardar su uso: ${usabilityError.message}`,
+          "error",
+        );
+        setRefreshVersion((version) => version + 1);
+        return false;
+      }
+    }
+
+    setRefreshVersion((version) => version + 1);
+    pushNotification("Cambios guardados en la reserva.", "success");
+    return true;
+  };
+
   const handleStaffCancelReservation = async (reservation) => {
     if (!reservation.professorEmail) {
       pushNotification(
@@ -1133,6 +1304,8 @@ function App() {
                       setRefreshVersion((version) => version + 1)
                     }
                     onAssignSpace={handleAdminAssignSpace}
+                    onAssignEquipment={handleAdminAssignEquipment}
+                    onUpdateReservation={handleStaffUpdateReservation}
                     onCancelReservation={handleStaffCancelReservation}
                   />
                 )}
