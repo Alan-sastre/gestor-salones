@@ -308,6 +308,9 @@ export default function AdminDashboard({
   const [reservationSearch, setReservationSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [showCancelled, setShowCancelled] = useState(true);
+  const [cancelledPage, setCancelledPage] = useState(1);
+  const CANCELLED_PER_PAGE = 10;
   const filteredReservations = useMemo(() => {
     const query = normalizeSearch(reservationSearch);
     return reservations.filter((reservation) => {
@@ -1282,7 +1285,7 @@ export default function AdminDashboard({
         </section>
 
         <section
-          hidden={activeSection !== "dashboard-cancelled"}
+          hidden={activeSection !== "dashboard-cancelled" || !showCancelled}
           className="admin-dashboard-management admin-dashboard-cancelled overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm"
         >
           <div className="flex items-center justify-between border-b border-amber-100 px-5 py-4">
@@ -1294,9 +1297,21 @@ export default function AdminDashboard({
                 Historial de reservas de salón que fueron canceladas.
               </p>
             </div>
-            <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
-              {stats.cancelledSpaceReservations.length}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+                {stats.cancelledSpaceReservations.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCancelled(false);
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-amber-50 hover:text-amber-700"
+                title="Dejar de ver cancelaciones"
+              >
+                ✕
+              </button>
+            </div>
           </div>
           {stats.cancelledSpaceReservations.length === 0 ? (
             <p className="px-5 py-6 text-sm text-slate-500">
@@ -1304,52 +1319,116 @@ export default function AdminDashboard({
               ejecuta la versión actualizada del script de Supabase.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
-                <thead className="bg-amber-50/60 text-xs uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-5 py-3 font-semibold">Fecha</th>
-                    <th className="px-5 py-3 font-semibold">Horario</th>
-                    <th className="px-5 py-3 font-semibold">Salón</th>
-                    <th className="px-5 py-3 font-semibold">Docente</th>
-                    <th className="px-5 py-3 font-semibold">Motivo</th>
-                    <th className="px-5 py-3 font-semibold">Estado</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {stats.cancelledSpaceReservations.map((reservation) => (
-                    <tr key={reservation.id}>
-                      <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">
-                        {formatDate(reservation.date)}
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-3 text-slate-600">
-                        {formatTime(reservation.start)} –{" "}
-                        {formatTime(reservation.end)}
-                      </td>
-                      <td className="px-5 py-3 font-semibold text-slate-800">
-                        {spaces.find(
-                          (space) =>
-                            Number(space.id) === Number(reservation.resourceId),
-                        )?.name || `Salón ${reservation.resourceId}`}
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-3 text-slate-600">
-                        {reservation.professorName ||
-                          reservation.professorEmail ||
-                          "Docente no identificado"}
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">
-                        {reservation.reason || "—"}
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                          Cancelada
-                        </span>
-                      </td>
+            <Fragment>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
+                  <thead className="bg-amber-50/60 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-5 py-3 font-semibold">Fecha</th>
+                      <th className="px-5 py-3 font-semibold">Horario</th>
+                      <th className="px-5 py-3 font-semibold">Salón</th>
+                      <th className="px-5 py-3 font-semibold">Docente</th>
+                      <th className="px-5 py-3 font-semibold">Motivo</th>
+                      <th className="px-5 py-3 font-semibold">Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {stats.cancelledSpaceReservations
+                      .slice(
+                        (cancelledPage - 1) * CANCELLED_PER_PAGE,
+                        cancelledPage * CANCELLED_PER_PAGE,
+                      )
+                      .map((reservation) => (
+                        <tr key={reservation.id}>
+                          <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">
+                            {formatDate(reservation.date)}
+                          </td>
+                          <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                            {formatTime(reservation.start)} –{" "}
+                            {formatTime(reservation.end)}
+                          </td>
+                          <td className="px-5 py-3 font-semibold text-slate-800">
+                            {spaces.find(
+                              (space) =>
+                                Number(space.id) === Number(reservation.resourceId),
+                            )?.name || `Salón ${reservation.resourceId}`}
+                          </td>
+                          <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                            {reservation.professorName ||
+                              reservation.professorEmail ||
+                              "Docente no identificado"}
+                          </td>
+                          <td className="px-5 py-3 text-slate-600">
+                            {reservation.reason || "—"}
+                          </td>
+                          <td className="px-5 py-3">
+                            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                              Cancelada
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+              {stats.cancelledSpaceReservations.length > CANCELLED_PER_PAGE && (
+                <div className="flex items-center justify-between border-t border-amber-100 px-5 py-3">
+                  <p className="text-xs text-slate-500">
+                    Mostrando{" "}
+                    {(cancelledPage - 1) * CANCELLED_PER_PAGE + 1}–
+                    {Math.min(cancelledPage * CANCELLED_PER_PAGE, stats.cancelledSpaceReservations.length)}{" "}
+                    de {stats.cancelledSpaceReservations.length}
+                  </p>
+                  <nav className="flex items-center gap-1" aria-label="Paginación de cancelaciones">
+                    <button
+                      type="button"
+                      disabled={cancelledPage === 1}
+                      onClick={() => setCancelledPage((p) => Math.max(1, p - 1))}
+                      className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      ‹ Anterior
+                    </button>
+                    {(() => {
+                      const totalPages = Math.ceil(
+                        stats.cancelledSpaceReservations.length / CANCELLED_PER_PAGE,
+                      );
+                      const pages = [];
+                      const maxVisible = 5;
+                      let start = Math.max(1, cancelledPage - Math.floor(maxVisible / 2));
+                      let end = Math.min(totalPages, start + maxVisible - 1);
+                      if (end - start + 1 < maxVisible) {
+                        start = Math.max(1, end - maxVisible + 1);
+                      }
+                      for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                      }
+                      return pages.map((page) => (
+                        <button
+                          key={page}
+                          type="button"
+                          onClick={() => setCancelledPage(page)}
+                          className={`min-w-[2rem] rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                            page === cancelledPage
+                              ? "bg-amber-600 text-white"
+                              : "border border-slate-200 text-slate-600 hover:bg-slate-50"
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ));
+                    })()}
+                    <button
+                      type="button"
+                      disabled={cancelledPage === Math.ceil(stats.cancelledSpaceReservations.length / CANCELLED_PER_PAGE)}
+                      onClick={() => setCancelledPage((p) => p + 1)}
+                      className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Siguiente ›
+                    </button>
+                  </nav>
+                </div>
+              )}
+            </Fragment>
           )}
         </section>
 
