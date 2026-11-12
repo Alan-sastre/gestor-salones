@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import {
   FaBan,
   FaCalendarAlt,
   FaChalkboardTeacher,
   FaClock,
+  FaEdit,
   FaFileExcel,
   FaLaptop,
   FaPlus,
@@ -125,6 +126,152 @@ function Bar({ value, max, tone = "bg-sky-500" }) {
   );
 }
 
+function ReservationEditForm({
+  reservation,
+  form,
+  setForm,
+  spaces,
+  equipment,
+  loading,
+  onSave,
+  onCancel,
+}) {
+  const isSpace = reservation.kind === "space";
+  const selectedEquipment = equipment.find(
+    (item) => item.id === form.resourceId,
+  );
+  const canSave =
+    form.date &&
+    form.resourceId &&
+    form.start >= "07:00" &&
+    form.start <= "20:00" &&
+    form.end >= "08:00" &&
+    form.end <= "21:00" &&
+    form.start < form.end &&
+    (isSpace ? form.reason.trim() : true) &&
+    (isSpace || selectedEquipment?.type !== "Gafas" || form.usability.trim());
+
+  return (
+    <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
+      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {isSpace ? "Salón" : "Equipo"}
+        <select
+          required
+          value={form.resourceId}
+          onChange={(event) =>
+            setForm((previous) => ({
+              ...previous,
+              resourceId: event.target.value,
+            }))
+          }
+          className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-800"
+        >
+          {(isSpace ? spaces : equipment).map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+              {!isSpace && item.spaceNumber
+                ? ` · Salón ${item.spaceNumber}`
+                : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Fecha
+        <input
+          type="date"
+          required
+          min={todayKey}
+          value={form.date}
+          onChange={(event) =>
+            setForm((previous) => ({ ...previous, date: event.target.value }))
+          }
+          className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-800"
+        />
+      </label>
+      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Inicio
+        <input
+          type="time"
+          required
+          min="07:00"
+          max="20:00"
+          value={form.start}
+          onChange={(event) =>
+            setForm((previous) => ({ ...previous, start: event.target.value }))
+          }
+          className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-800"
+        />
+      </label>
+      <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        Fin
+        <input
+          type="time"
+          required
+          min="08:00"
+          max="21:00"
+          value={form.end}
+          onChange={(event) =>
+            setForm((previous) => ({ ...previous, end: event.target.value }))
+          }
+          className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-800"
+        />
+      </label>
+      {isSpace ? (
+        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Escuela o motivo
+          <input
+            required
+            maxLength={160}
+            value={form.reason}
+            onChange={(event) =>
+              setForm((previous) => ({
+                ...previous,
+                reason: event.target.value,
+              }))
+            }
+            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-800"
+          />
+        </label>
+      ) : selectedEquipment?.type === "Gafas" ? (
+        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          Uso de las gafas
+          <input
+            maxLength={500}
+            required
+            value={form.usability}
+            onChange={(event) =>
+              setForm((previous) => ({
+                ...previous,
+                usability: event.target.value,
+              }))
+            }
+            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-800"
+          />
+        </label>
+      ) : null}
+      <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-3">
+        <button
+          type="button"
+          disabled={loading || !canSave}
+          onClick={onSave}
+          className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Guardar cambios
+        </button>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={onCancel}
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white disabled:opacity-50"
+        >
+          Cancelar edición
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard({
   role = "admin",
   activeSection = "dashboard-summary",
@@ -136,6 +283,8 @@ export default function AdminDashboard({
   lastUpdatedAt,
   onRefresh,
   onAssignSpace,
+  onAssignEquipment,
+  onUpdateReservation,
   onCancelReservation,
 }) {
   const [assignment, setAssignment] = useState({
@@ -146,6 +295,16 @@ export default function AdminDashboard({
     end: "09:00",
     reason: "",
   });
+  const [equipmentAssignment, setEquipmentAssignment] = useState({
+    professorEmail: "",
+    equipmentId: String(equipment[0]?.id ?? ""),
+    date: todayKey,
+    start: "07:00",
+    end: "09:00",
+    usability: "",
+  });
+  const [editingReservationId, setEditingReservationId] = useState(null);
+  const [reservationEditForm, setReservationEditForm] = useState(null);
   const [reservationSearch, setReservationSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -338,6 +497,39 @@ export default function AdminDashboard({
     }
   };
 
+  const submitEquipmentAssignment = async (event) => {
+    event.preventDefault();
+    const saved = await onAssignEquipment(equipmentAssignment);
+    if (saved) {
+      setEquipmentAssignment((previous) => ({
+        ...previous,
+        professorEmail: "",
+        usability: "",
+      }));
+    }
+  };
+
+  const beginReservationEdit = (reservation) => {
+    setEditingReservationId(`${reservation.kind}-${reservation.id}`);
+    setReservationEditForm({
+      resourceId: String(reservation.resourceId),
+      date: reservation.date,
+      start: reservation.start,
+      end: reservation.end,
+      reason: reservation.kind === "space" ? reservation.reason || "" : "",
+      usability: reservation.usability || reservation.reason || "",
+    });
+  };
+
+  const saveReservationEdit = async (reservation) => {
+    if (!reservationEditForm) return;
+    const saved = await onUpdateReservation(reservation, reservationEditForm);
+    if (saved) {
+      setEditingReservationId(null);
+      setReservationEditForm(null);
+    }
+  };
+
   const cancelSpace = async (reservation) => {
     const resourceName =
       spaces.find(
@@ -462,6 +654,7 @@ export default function AdminDashboard({
   const sectionTitles = {
     "dashboard-summary": "Resumen de actividad",
     "dashboard-assign": "Asignar salón",
+    "dashboard-assign-equipment": "Asignar equipo",
     "dashboard-reservations": "Reservas por gestionar",
     "dashboard-equipment-reservations": "Préstamos de equipos",
     "dashboard-cancelled": "Cancelaciones",
@@ -535,7 +728,9 @@ export default function AdminDashboard({
       </div>
 
       <section
-        hidden={activeSection === "dashboard-assign"}
+        hidden={["dashboard-assign", "dashboard-assign-equipment"].includes(
+          activeSection,
+        )}
         className="grid gap-3 border-b border-slate-200 pb-5 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1fr)_170px_170px_auto] lg:items-end"
         aria-label="Filtros de datos"
       >
@@ -706,6 +901,144 @@ export default function AdminDashboard({
         </section>
 
         <section
+          hidden={activeSection !== "dashboard-assign-equipment"}
+          className="admin-dashboard-management rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+        >
+          <div className="mb-4">
+            <h3 className="text-lg font-bold text-slate-900">
+              Asignar equipo a un docente
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Registra un préstamo para el docente; la disponibilidad del
+              equipo se valida al guardar.
+            </p>
+          </div>
+          <form
+            onSubmit={submitEquipmentAssignment}
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Correo del docente
+              <input
+                type="email"
+                required
+                value={equipmentAssignment.professorEmail}
+                onChange={(event) =>
+                  setEquipmentAssignment({
+                    ...equipmentAssignment,
+                    professorEmail: event.target.value,
+                  })
+                }
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal normal-case text-slate-800"
+                placeholder="docente@universidad.edu"
+              />
+            </label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Equipo
+              <select
+                required
+                value={equipmentAssignment.equipmentId}
+                onChange={(event) =>
+                  setEquipmentAssignment({
+                    ...equipmentAssignment,
+                    equipmentId: event.target.value,
+                  })
+                }
+                className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-800"
+              >
+                {equipment.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                    {item.spaceNumber ? ` · Salón ${item.spaceNumber}` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Fecha
+              <input
+                type="date"
+                required
+                min={todayKey}
+                value={equipmentAssignment.date}
+                onChange={(event) =>
+                  setEquipmentAssignment({
+                    ...equipmentAssignment,
+                    date: event.target.value,
+                  })
+                }
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal normal-case text-slate-800"
+              />
+            </label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Hora de inicio
+              <input
+                type="time"
+                required
+                min="07:00"
+                max="20:00"
+                value={equipmentAssignment.start}
+                onChange={(event) =>
+                  setEquipmentAssignment({
+                    ...equipmentAssignment,
+                    start: event.target.value,
+                  })
+                }
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal normal-case text-slate-800"
+              />
+            </label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Hora de fin
+              <input
+                type="time"
+                required
+                min="08:00"
+                max="21:00"
+                value={equipmentAssignment.end}
+                onChange={(event) =>
+                  setEquipmentAssignment({
+                    ...equipmentAssignment,
+                    end: event.target.value,
+                  })
+                }
+                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal normal-case text-slate-800"
+              />
+            </label>
+            {equipment.find(
+              (item) => item.id === equipmentAssignment.equipmentId,
+            )?.type === "Gafas" && (
+              <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 sm:col-span-2 lg:col-span-1">
+                Uso de las gafas
+                <input
+                  type="text"
+                  required
+                  maxLength={500}
+                  value={equipmentAssignment.usability}
+                  onChange={(event) =>
+                    setEquipmentAssignment({
+                      ...equipmentAssignment,
+                      usability: event.target.value,
+                    })
+                  }
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-normal normal-case text-slate-800"
+                  placeholder="Propósito del préstamo"
+                />
+              </label>
+            )}
+            <div className="sm:col-span-2 lg:col-span-3">
+              <button
+                type="submit"
+                disabled={loading || equipment.length === 0}
+                className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FaPlus />
+                Asignar equipo
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section
           hidden={activeSection !== "dashboard-reservations"}
           className="admin-dashboard-management admin-dashboard-reservations overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
         >
@@ -714,7 +1047,7 @@ export default function AdminDashboard({
               Reservas de salones por gestionar
             </h3>
             <p className="text-sm text-slate-500">
-              Cancela desde aquí las reservas futuras de los docentes.
+              Edita o cancela las reservas futuras de los docentes.
             </p>
           </div>
           {loading ? (
@@ -735,46 +1068,91 @@ export default function AdminDashboard({
                     <th className="px-5 py-3 font-semibold">Salón</th>
                     <th className="px-5 py-3 font-semibold">Docente</th>
                     <th className="px-5 py-3 font-semibold">Motivo</th>
-                    <th className="px-5 py-3 font-semibold">Acción</th>
+                    <th className="px-5 py-3 font-semibold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {stats.spaceReservationsForManagement.map((reservation) => (
-                    <tr key={reservation.id}>
-                      <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">
-                        {formatDate(reservation.date)}
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-3 text-slate-600">
-                        {formatTime(reservation.start)} –{" "}
-                        {formatTime(reservation.end)}
-                      </td>
-                      <td className="px-5 py-3 font-semibold text-slate-800">
-                        {spaces.find(
-                          (space) =>
-                            Number(space.id) === Number(reservation.resourceId),
-                        )?.name || `Salón ${reservation.resourceId}`}
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-3 text-slate-600">
-                        {reservation.professorName ||
-                          reservation.professorEmail ||
-                          "Docente no identificado"}
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">
-                        {reservation.reason || "—"}
-                      </td>
-                      <td className="px-5 py-3">
-                        <button
-                          type="button"
-                          disabled={loading}
-                          onClick={() => cancelSpace(reservation)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
-                        >
-                          <FaBan />
-                          Cancelar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {stats.spaceReservationsForManagement.map((reservation) => {
+                    const editKey = `${reservation.kind}-${reservation.id}`;
+                    const editing =
+                      editingReservationId === editKey && reservationEditForm;
+                    return (
+                      <Fragment key={editKey}>
+                        <tr>
+                          <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">
+                            {formatDate(reservation.date)}
+                          </td>
+                          <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                            {formatTime(reservation.start)} –{" "}
+                            {formatTime(reservation.end)}
+                          </td>
+                          <td className="px-5 py-3 font-semibold text-slate-800">
+                            {spaces.find(
+                              (space) =>
+                                Number(space.id) ===
+                                Number(reservation.resourceId),
+                            )?.name || `Salón ${reservation.resourceId}`}
+                          </td>
+                          <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                            {reservation.professorName ||
+                              reservation.professorEmail ||
+                              "Docente no identificado"}
+                          </td>
+                          <td className="px-5 py-3 text-slate-600">
+                            {reservation.reason || "—"}
+                          </td>
+                          <td className="px-5 py-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={loading}
+                                onClick={() => {
+                                  if (editing) {
+                                    setEditingReservationId(null);
+                                    setReservationEditForm(null);
+                                  } else {
+                                    beginReservationEdit(reservation);
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-50"
+                              >
+                                <FaEdit aria-hidden="true" />
+                                {editing ? "Cerrar" : "Editar"}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={loading}
+                                onClick={() => cancelSpace(reservation)}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                              >
+                                <FaBan aria-hidden="true" />
+                                Cancelar
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {editing && (
+                          <tr className="bg-sky-50/60">
+                            <td colSpan={6} className="p-0">
+                              <ReservationEditForm
+                                reservation={reservation}
+                                form={reservationEditForm}
+                                setForm={setReservationEditForm}
+                                spaces={spaces}
+                                equipment={equipment}
+                                loading={loading}
+                                onSave={() => saveReservationEdit(reservation)}
+                                onCancel={() => {
+                                  setEditingReservationId(null);
+                                  setReservationEditForm(null);
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -790,7 +1168,7 @@ export default function AdminDashboard({
               Préstamos de equipos por gestionar
             </h3>
             <p className="text-sm text-slate-500">
-              Consulta y cancela los préstamos próximos de los docentes.
+              Edita o cancela los préstamos próximos de los docentes.
             </p>
           </div>
           {loading ? (
@@ -811,44 +1189,91 @@ export default function AdminDashboard({
                     <th className="px-5 py-3 font-semibold">Equipo</th>
                     <th className="px-5 py-3 font-semibold">Docente</th>
                     <th className="px-5 py-3 font-semibold">Uso</th>
-                    <th className="px-5 py-3 font-semibold">Acción</th>
+                    <th className="px-5 py-3 font-semibold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {stats.equipmentReservationsForManagement.map(
-                    (reservation) => (
-                      <tr key={reservation.id}>
-                        <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">
-                          {formatDate(reservation.date)}
-                        </td>
-                        <td className="whitespace-nowrap px-5 py-3 text-slate-600">
-                          {formatTime(reservation.start)} –{" "}
-                          {formatTime(reservation.end)}
-                        </td>
-                        <td className="px-5 py-3 font-semibold text-slate-800">
-                          {reservation.resourceName}
-                        </td>
-                        <td className="whitespace-nowrap px-5 py-3 text-slate-600">
-                          {reservation.professorName ||
-                            reservation.professorEmail ||
-                            "Docente no identificado"}
-                        </td>
-                        <td className="px-5 py-3 text-slate-600">
-                          {reservation.reason || "—"}
-                        </td>
-                        <td className="px-5 py-3">
-                          <button
-                            type="button"
-                            disabled={loading}
-                            onClick={() => cancelEquipment(reservation)}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
-                          >
-                            <FaBan aria-hidden="true" />
-                            Cancelar
-                          </button>
-                        </td>
-                      </tr>
-                    ),
+                    (reservation) => {
+                      const editKey = `${reservation.kind}-${reservation.id}`;
+                      const editing =
+                        editingReservationId === editKey &&
+                        reservationEditForm;
+                      return (
+                        <Fragment key={editKey}>
+                          <tr>
+                            <td className="whitespace-nowrap px-5 py-3 capitalize text-slate-700">
+                              {formatDate(reservation.date)}
+                            </td>
+                            <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                              {formatTime(reservation.start)} –{" "}
+                              {formatTime(reservation.end)}
+                            </td>
+                            <td className="px-5 py-3 font-semibold text-slate-800">
+                              {reservation.resourceName}
+                            </td>
+                            <td className="whitespace-nowrap px-5 py-3 text-slate-600">
+                              {reservation.professorName ||
+                                reservation.professorEmail ||
+                                "Docente no identificado"}
+                            </td>
+                            <td className="px-5 py-3 text-slate-600">
+                              {reservation.reason || "—"}
+                            </td>
+                            <td className="px-5 py-3">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  disabled={loading}
+                                  onClick={() => {
+                                    if (editing) {
+                                      setEditingReservationId(null);
+                                      setReservationEditForm(null);
+                                    } else {
+                                      beginReservationEdit(reservation);
+                                    }
+                                  }}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 px-3 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-50"
+                                >
+                                  <FaEdit aria-hidden="true" />
+                                  {editing ? "Cerrar" : "Editar"}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={loading}
+                                  onClick={() => cancelEquipment(reservation)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                                >
+                                  <FaBan aria-hidden="true" />
+                                  Cancelar
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {editing && (
+                            <tr className="bg-sky-50/60">
+                              <td colSpan={6} className="p-0">
+                                <ReservationEditForm
+                                  reservation={reservation}
+                                  form={reservationEditForm}
+                                  setForm={setReservationEditForm}
+                                  spaces={spaces}
+                                  equipment={equipment}
+                                  loading={loading}
+                                  onSave={() =>
+                                    saveReservationEdit(reservation)
+                                  }
+                                  onCancel={() => {
+                                    setEditingReservationId(null);
+                                    setReservationEditForm(null);
+                                  }}
+                                />
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    },
                   )}
                 </tbody>
               </table>
