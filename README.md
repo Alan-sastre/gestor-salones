@@ -82,9 +82,9 @@ El inventario se asigna por salón: el 501 tiene LEGO y pantalla inteligente; el
 
 El administrador de demostración está registrado en Supabase en `admin_codes.email` y se valida mediante la función `lookup_test_admin`. En **Cuentas**, Administración puede crear, editar, cambiar el rol y eliminar cuentas. Un docente con reservas no se puede borrar ni cambiar de rol, para proteger su historial; tampoco se puede eliminar al último administrador ni cambiar la identidad del administrador activo.
 
-El rol **Soporte** puede consultar el dashboard operativo, asignar salones y cancelar reservas, pero no puede administrar cuentas ni roles. Administración ve además la pestaña **Cuentas**.
+El rol **Soporte** puede consultar el dashboard operativo, asignar salones y equipos a docentes, y editar o cancelar sus reservas, pero no puede administrar cuentas ni roles. Administración ve además la pestaña **Cuentas**.
 
-Desde el dashboard, Administración o Soporte puede asignar un salón a un docente indicando su correo, fecha, horario y motivo; también puede cancelar reservas futuras y consultar las cancelaciones. Para conservar y mostrar el historial de salones cancelados, ejecuta la versión actualizada de [`supabase/usabilidad-gafas.sql`](supabase/usabilidad-gafas.sql) en el SQL Editor de Supabase. Las reservas canceladas dejan de ocupar el horario.
+Desde el dashboard, Administración o Soporte puede asignar un salón a un docente indicando su correo, fecha, horario y motivo, o asignarle un equipo indicando correo, fecha y horario. En **Reservas por gestionar** y **Préstamos de equipos** puede editar los datos o cancelar las reservas futuras; también puede consultar las cancelaciones. Para conservar y mostrar el historial de salones cancelados, ejecuta la versión actualizada de [`supabase/usabilidad-gafas.sql`](supabase/usabilidad-gafas.sql) en el SQL Editor de Supabase. Las reservas canceladas dejan de ocupar el horario.
 
 El dashboard se actualiza al recibir cambios en reservas e inventario mediante Supabase Realtime, y sincroniza los datos cada 15 segundos como respaldo. Para habilitar los eventos en las tablas necesarias, ejecuta [`supabase/realtime-admin.sql`](supabase/realtime-admin.sql) en el SQL Editor. Si Realtime no está disponible o aún no se ha habilitado, el dashboard continúa actualizándose automáticamente con el respaldo periódico.
 
