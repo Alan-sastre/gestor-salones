@@ -672,29 +672,31 @@ function App() {
     return true;
   };
 
-  const handleAdminCancelSpace = async (reservation) => {
+  const handleStaffCancelReservation = async (reservation) => {
     if (!reservation.professorEmail) {
       pushNotification(
-        "No se puede cancelar: falta el correo del docente asociado a la reserva.",
+        "No se puede cancelar: falta el correo del docente asociado al préstamo.",
         "error",
       );
       return false;
     }
+    const resourceType = reservation.kind === "equipment" ? "equipment" : "space";
+    const resourceLabel = resourceType === "equipment" ? "préstamo de equipo" : "reserva de salón";
     const { data, error } = await supabase.rpc("cancel_test_reservation", {
       p_professor_email: reservation.professorEmail,
       p_id: reservation.id,
-      p_resource_type: "space",
+      p_resource_type: resourceType,
     });
     if (error || !data) {
       pushNotification(
-        `No se pudo cancelar el salón${error ? `: ${error.message}` : "."}`,
+        `No se pudo cancelar el ${resourceLabel}${error ? `: ${error.message}` : "."}`,
         "error",
       );
       return false;
     }
 
     setRefreshVersion((version) => version + 1);
-    pushNotification("Reserva de salón cancelada.", "success");
+    pushNotification(`${resourceLabel.charAt(0).toUpperCase()}${resourceLabel.slice(1)} cancelado.`, "success");
     return true;
   };
 
@@ -1126,7 +1128,7 @@ function App() {
                       setRefreshVersion((version) => version + 1)
                     }
                     onAssignSpace={handleAdminAssignSpace}
-                    onCancelSpace={handleAdminCancelSpace}
+                    onCancelReservation={handleStaffCancelReservation}
                   />
                 )}
               </div>
