@@ -4,6 +4,7 @@ import {
   FaChartBar,
   FaClipboardList,
   FaDoorOpen,
+  FaLaptop,
   FaTools,
   FaUserCog,
 } from "react-icons/fa";
@@ -11,6 +12,7 @@ import {
 const DASHBOARD_ITEMS = [
   { id: "dashboard-summary", label: "Resumen", icon: FaChartBar },
   { id: "dashboard-assign", label: "Asignar salón", icon: FaDoorOpen },
+  { id: "dashboard-assign-equipment", label: "Asignar equipo", icon: FaLaptop },
   {
     id: "dashboard-reservations",
     label: "Reservas por gestionar",
