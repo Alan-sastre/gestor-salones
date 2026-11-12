@@ -680,8 +680,10 @@ function App() {
       );
       return false;
     }
-    const resourceType = reservation.kind === "equipment" ? "equipment" : "space";
-    const resourceLabel = resourceType === "equipment" ? "préstamo de equipo" : "reserva de salón";
+    const resourceType =
+      reservation.kind === "equipment" ? "equipment" : "space";
+    const resourceLabel =
+      resourceType === "equipment" ? "préstamo de equipo" : "reserva de salón";
     const { data, error } = await supabase.rpc("cancel_test_reservation", {
       p_professor_email: reservation.professorEmail,
       p_id: reservation.id,
@@ -696,7 +698,10 @@ function App() {
     }
 
     setRefreshVersion((version) => version + 1);
-    pushNotification(`${resourceLabel.charAt(0).toUpperCase()}${resourceLabel.slice(1)} cancelado.`, "success");
+    pushNotification(
+      `${resourceLabel.charAt(0).toUpperCase()}${resourceLabel.slice(1)} cancelado.`,
+      "success",
+    );
     return true;
   };
 
