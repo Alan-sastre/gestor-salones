@@ -45,37 +45,30 @@ Abre tu navegador en **http://localhost:5173** y ya puedes usar la aplicación.
 
 ## Otros comandos
 
-| Comando | Descripción |
-|---|---|
-| `npm run dev` | Servidor de desarrollo con recarga automática |
-| `npm run build` | Genera la versión de producción en `dist/` |
+| Comando           | Descripción                                      |
+| ----------------- | ------------------------------------------------ |
+| `npm run dev`     | Servidor de desarrollo con recarga automática    |
+| `npm run build`   | Genera la versión de producción en `dist/`       |
 | `npm run preview` | Previsualiza la versión de producción localmente |
 
 ---
 
 ## Base de datos de prueba y préstamos
 
-La app puede conectarse a un proyecto Supabase configurado por separado. El esquema SQL no se distribuye en este repositorio; las tablas y funciones RPC requeridas deben estar desplegadas en el proyecto antes de configurar la conexión.
+La app puede conectarse a un proyecto Supabase configurado por separado. El esquema base debe estar desplegado en el proyecto; la migración `supabase/email-identity.sql` convierte la identidad a correo y `supabase/account-management.sql` agrega Soporte y la administración de cuentas.
 
 1. Crea `.env.local` en la raíz con `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` o `VITE_SUPABASE_ANON_KEY`.
 2. Reinicia Vite (`Ctrl+C` y `npm run dev`) para que lea las variables.
-3. En la base de datos configurada, inicia sesión con un ID de profesor válido:
+3. En Supabase, ejecuta [`supabase/email-identity.sql`](supabase/email-identity.sql) en el SQL Editor. La migración asigna `d1@d.com` a Ana Martínez, `d2@d.com` a Carlos Ruiz y `admin@admin.com` a Administración Académica; conserva las reservas de Ana por correo y retira los tres perfiles sin reservas. El esquema queda usando correo como clave, sin columnas `code`.
+4. Ejecuta [`supabase/account-management.sql`](supabase/account-management.sql) para agregar las RPC de gestión y el rol Soporte.
 
 ### Configuración en Netlify
 
 En **Site configuration → Environment variables**, agrega `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` (o `VITE_SUPABASE_ANON_KEY`) con los valores del proyecto Supabase. Después vuelve a publicar el sitio para que Vite incorpore las variables en la compilación. Usa únicamente la clave pública `publishable`/`anon`, nunca `service_role`.
 
-Si estas variables faltan en producción, el acceso queda bloqueado y la pantalla lo informa; no se permite el acceso local de demostración con cualquier ID numérico.
+Si estas variables faltan en producción, el acceso queda bloqueado y la pantalla lo informa; no se permite el acceso local de demostración.
 
-| ID | Docente |
-|---|---|
-| 1001 | Ana Martínez |
-| 1002 | Carlos Ruiz |
-| 1003 | María López |
-| 1004 | José Hernández |
-| 1005 | Laura Gómez |
-
-Cada ID muestra sus propios préstamos, mientras el calendario y el inventario consideran la disponibilidad global, incluidas las reservas de otros docentes. Desde **Tus reservas**, los espacios y los equipos aparecen con su foto, en secciones separadas y ordenados por fecha; se pueden editar o cancelar.
+El acceso solicita únicamente el correo, sin contraseña ni verificación de propiedad del correo. Cada cuenta muestra sus propios préstamos, mientras el calendario y el inventario consideran la disponibilidad global, incluidas las reservas de otros docentes. Desde **Tus reservas**, los espacios y los equipos aparecen con su foto, en secciones separadas y ordenados por fecha; se pueden editar o cancelar.
 
 ### Reservar equipos sin salón
 
@@ -87,19 +80,21 @@ El inventario se asigna por salón: el 501 tiene LEGO y pantalla inteligente; el
 
 ### Rol administrador
 
-El administrador de demostración está registrado en Supabase en la tabla `admin_codes` y se valida mediante la función `lookup_test_admin`. Inicia sesión con el código que registraste en esa tabla. Para cambiarlo, actualiza el registro directamente en Supabase.
+El administrador de demostración está registrado en Supabase en `admin_codes.email` y se valida mediante la función `lookup_test_admin`. En **Cuentas**, Administración puede crear, editar, cambiar el rol y eliminar cuentas. Un docente con reservas no se puede borrar ni cambiar de rol, para proteger su historial; tampoco se puede eliminar al último administrador ni cambiar la identidad del administrador activo.
 
-Desde el dashboard, el administrador puede asignar un salón a un docente indicando su código, fecha, horario y motivo; también puede cancelar reservas futuras y consultar las cancelaciones. Para conservar y mostrar el historial de salones cancelados, ejecuta la versión actualizada de [`supabase/usabilidad-gafas.sql`](supabase/usabilidad-gafas.sql) en el SQL Editor de Supabase. Las reservas canceladas dejan de ocupar el horario.
+El rol **Soporte** puede consultar el dashboard operativo, asignar salones y cancelar reservas, pero no puede administrar cuentas ni roles. Administración ve además la pestaña **Cuentas**.
+
+Desde el dashboard, Administración o Soporte puede asignar un salón a un docente indicando su correo, fecha, horario y motivo; también puede cancelar reservas futuras y consultar las cancelaciones. Para conservar y mostrar el historial de salones cancelados, ejecuta la versión actualizada de [`supabase/usabilidad-gafas.sql`](supabase/usabilidad-gafas.sql) en el SQL Editor de Supabase. Las reservas canceladas dejan de ocupar el horario.
 
 El dashboard se actualiza al recibir cambios en reservas e inventario mediante Supabase Realtime, y sincroniza los datos cada 15 segundos como respaldo. Para habilitar los eventos en las tablas necesarias, ejecuta [`supabase/realtime-admin.sql`](supabase/realtime-admin.sql) en el SQL Editor. Si Realtime no está disponible o aún no se ha habilitado, el dashboard continúa actualizándose automáticamente con el respaldo periódico.
 
-El acceso administrador es un código de demostración almacenado en la base de datos, no un usuario de Supabase Auth ni autenticación segura. No uses este mecanismo para proteger datos reales. Sin Supabase configurado, el código **9001** no abre el dashboard. El archivo `src/data/roles.js` no se usa y se eliminó; el rol administrador se obtiene de Supabase.
+El acceso por correo es solo una identificación de demostración, no verifica la propiedad del correo ni es autenticación segura. Las RPC de cuentas también reciben el correo del administrador como comprobación de rol, por lo que no son seguras contra suplantación. No uses este mecanismo para proteger datos reales. El acceso de Administración y Soporte requiere Supabase. El archivo `src/data/roles.js` no se usa y se eliminó; el rol se obtiene de las RPC de Supabase.
 
 Para ver los nombres de los docentes en la agenda y en las estadísticas, el proyecto Supabase debe tener desplegada la función `get_reservation_availability_details`. Si no está disponible, la app usa `get_reservation_availability` y puede mostrar **Otro docente** en lugar del nombre; ese modo de compatibilidad no incluye el historial de cancelaciones.
 
 La bienvenida avanza automáticamente después de 5 segundos, sin necesidad de presionar un botón.
 
-**Importante:** el ID numérico no es autenticación segura. Este flujo de demostración permite llamadas con la clave pública y los datos pueden manipularse desde el navegador; úsalo solo con información ficticia en un proyecto de desarrollo. No uses datos personales o de producción. Para uso real se requiere autenticación Supabase y políticas por usuario.
+**Importante:** ingresar un correo sin verificarlo no es autenticación segura. Este flujo de demostración permite llamadas con la clave pública y los datos pueden manipularse desde el navegador; úsalo solo con información ficticia en un proyecto de desarrollo. No uses datos personales o de producción. Para uso real se requiere autenticación Supabase y políticas por usuario.
 
 Las variables del frontend deben usar únicamente la clave pública `publishable`/`anon`. **Nunca uses la clave `service_role` en el navegador ni la compartas.**
 
