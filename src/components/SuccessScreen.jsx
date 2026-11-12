@@ -17,7 +17,7 @@ export default function SuccessScreen({ onFinish }) {
         </div>
 
         <div>
-          <h1 className="text-3xl font-bold text-emerald-700">¡Reserva confirmada!</h1>
+          <h1 className="text-2xl font-bold text-emerald-700 sm:text-3xl">¡Reserva confirmada!</h1>
           <p className="mt-2 text-slate-500">Tu espacio ha sido reservado exitosamente</p>
         </div>
 
