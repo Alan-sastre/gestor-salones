@@ -1290,7 +1290,7 @@ export default function AdminDashboard({
         >
           <div className="flex flex-col gap-3 border-b border-amber-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <div>
-              <h3 className="text-lg font-bold text-slate-900">
+              <h3 className="text-base font-bold text-slate-900 sm:text-lg">
                 Salones cancelados
               </h3>
               <p className="text-sm text-slate-500">
