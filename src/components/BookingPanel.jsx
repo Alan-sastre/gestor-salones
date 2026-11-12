@@ -282,19 +282,21 @@ export default function BookingPanel({
                     booking.owned ? 'border-sky-100 bg-sky-50/60' : 'border-slate-200 bg-white',
                   ].join(' ')}
                 >
-                  <div className="flex items-stretch">
+                  <div className="flex flex-col sm:flex-row sm:items-stretch">
                     <div
                       className={[
-                        'flex min-w-[5.5rem] flex-col items-center justify-center px-3 py-3 text-center text-white',
+                        'flex items-center justify-center gap-2 px-3 py-2.5 text-center text-white sm:flex-col sm:px-4 sm:py-3',
                         booking.owned ? 'bg-sky-600' : 'bg-slate-500',
                       ].join(' ')}
                     >
-                      <FaClock className="mb-1 text-sm opacity-80" />
-                      <span className="text-sm font-bold leading-tight">{formatHour(booking.a)}</span>
-                      <span className="my-0.5 text-xs opacity-70">hasta</span>
-                      <span className="text-sm font-bold leading-tight">{formatHour(booking.b)}</span>
+                      <FaClock className="shrink-0 text-sm opacity-80" />
+                      <div className="flex flex-col items-center">
+                        <span className="text-sm font-bold leading-tight">{formatHour(booking.a)}</span>
+                        <span className="my-0.5 text-xs opacity-70">hasta</span>
+                        <span className="text-sm font-bold leading-tight">{formatHour(booking.b)}</span>
+                      </div>
                     </div>
-                    <div className="flex min-w-0 flex-1 items-center justify-between gap-2 p-3">
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-2 p-3 sm:flex-row">
                       <div className="min-w-0">
                         <span
                           className={[
