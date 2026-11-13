@@ -35,3 +35,6 @@ supabase/
 !supabase/
 supabase/*
 !supabase/inventario-por-salon.sql
+
+docs/
+docs/img

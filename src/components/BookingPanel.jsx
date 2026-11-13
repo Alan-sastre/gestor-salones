@@ -238,7 +238,7 @@ export default function BookingPanel({
           </div>
 
           <div className="relative mt-1 h-3 text-[9px] text-slate-400">
-            {[7, 10, 13, 16, 19].map((hour) => (
+            {[7, 10, 13, 16].map((hour) => (
               <span
                 key={`label-${hour}`}
                 className={[
