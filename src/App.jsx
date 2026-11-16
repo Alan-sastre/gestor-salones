@@ -1297,6 +1297,7 @@ function App() {
                     spaces={spaces}
                     equipment={equipment}
                     role={role}
+                    userEmail={loggedProfessorEmail}
                     loading={dataLoading}
                     realtimeStatus={realtimeStatus}
                     lastUpdatedAt={lastUpdatedAt}

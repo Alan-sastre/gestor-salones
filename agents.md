@@ -23,7 +23,9 @@ src/
 ├── main.jsx                         # Punto de entrada de React
 ├── index.css                        # Tailwind y animaciones globales
 ├── lib/
-│   └── supabase.js                  # Cliente y configuración de Supabase
+│   ├── supabase.js                  # Cliente y configuración de Supabase
+│   ├── excelReport.js               # Informe .xlsx detallado (resumen, estadísticas y gráficos)
+│   └── excelCharts.js               # Gráficos del informe dibujados con canvas
 ├── components/
 │   ├── LoginScreen.jsx              # Acceso de demostración por correo
 │   ├── WelcomeScreen.jsx            # Bienvenida al docente
@@ -70,6 +72,7 @@ El correo registrado en `admin_codes` abre el rol **administrador**, con dashboa
 - **Disponibilidad**: el calendario y el inventario de equipos muestran la disponibilidad global, incluidas las reservas de otros docentes; la vista **Tus reservas** muestra las del docente activo.
 - **Equipos**: se pueden reservar desde la agenda (paso 4) o directamente en la vista **Equipos**, sin reservar un laboratorio.
 - **Administrador y soporte**: ambos usan el dashboard operativo y pueden asignar/cancelar reservas. Solo administrador ve gestión de cuentas; las RPC `list_demo_accounts`, `save_demo_account` y `delete_demo_account` limitan operaciones por correo de admin, exclusivamente como control de demostración, no de seguridad real.
+- **Exportación a Excel**: desde **Estadísticas**, el botón **Exportar Excel** genera un `.xlsx` real con diez hojas: resumen ejecutivo, histórico mensual, detalle de reservas, estadísticas por salón, equipo, docente, escuela, día y hora, cancelaciones y un panel de gráficos. Respeta los filtros de búsqueda y fechas de la pantalla; el histórico y los gráficos usan la base completa. `exceljs` se carga de forma diferida solo al exportar y los gráficos se dibujan con canvas (`excelCharts.js`).
 - **Horarios**: de 07:00 a 21:00; las reservas se validan contra la disponibilidad del recurso y el horario.
 - **Seguridad**: el acceso de demostración no es autenticación segura. Usa exclusivamente claves públicas de Supabase en el frontend y datos ficticios.
 - Consulta `README.md` para configurar la conexión con Supabase y usar los docentes disponibles en la base configurada.

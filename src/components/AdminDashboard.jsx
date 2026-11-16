@@ -62,37 +62,6 @@ const formatLongDate = (date) => {
   return text.charAt(0).toUpperCase() + text.slice(1);
 };
 
-const escapeXml = (value) =>
-  String(value ?? "")
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-
-const createWorksheet = (name, rows) => `
-  <Worksheet ss:Name="${escapeXml(name)}">
-    <Table>
-      ${rows
-        .map(
-          (row, rowIndex) => `
-            <Row>
-              ${row
-                .map((value) => {
-                  const isNumber =
-                    typeof value === "number" && Number.isFinite(value);
-                  return `<Cell${rowIndex === 0 ? ' ss:StyleID="Header"' : ""}><Data ss:Type="${isNumber ? "Number" : "String"}">${escapeXml(value)}</Data></Cell>`;
-                })
-                .join("")}
-            </Row>
-          `,
-        )
-        .join("")}
-    </Table>
-  </Worksheet>
-`;
-
 const todayKey = (() => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -278,6 +247,7 @@ export default function AdminDashboard({
   reservations = [],
   spaces = [],
   equipment = [],
+  userEmail = "",
   loading,
   realtimeStatus,
   lastUpdatedAt,
@@ -310,6 +280,8 @@ export default function AdminDashboard({
   const [dateTo, setDateTo] = useState("");
   const [showCancelled, setShowCancelled] = useState(true);
   const [cancelledPage, setCancelledPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
+  const [exportFeedback, setExportFeedback] = useState(null);
   const CANCELLED_PER_PAGE = 10;
   const filteredReservations = useMemo(() => {
     const query = normalizeSearch(reservationSearch);
@@ -571,88 +543,38 @@ export default function AdminDashboard({
     ...stats.professorStats.map((item) => item.count),
   );
   const spacesInUse = stats.spaceUsage.filter((item) => item.count > 0).length;
-  const exportStatistics = () => {
-    const workbook = `<?xml version="1.0" encoding="UTF-8"?>
-      <?mso-application progid="Excel.Sheet"?>
-      <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-        xmlns:o="urn:schemas-microsoft-com:office:office"
-        xmlns:x="urn:schemas-microsoft-com:office:excel"
-        xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-        <Styles>
-          <Style ss:ID="Header">
-            <Font ss:Bold="1" ss:Color="#FFFFFF"/>
-            <Interior ss:Color="#0284C7" ss:Pattern="Solid"/>
-          </Style>
-        </Styles>
-        ${createWorksheet("Resumen", [
-          ["Indicador", "Valor"],
-          ["Fecha de exportación", new Date().toLocaleString("es")],
-          [
-            "Mes de las estadísticas",
-            new Date().toLocaleDateString("es", {
-              month: "long",
-              year: "numeric",
-            }),
-          ],
-          ["Reservas activas", stats.activeReservations.length],
-          ["Reservas del mes", stats.monthReservations.length],
-          ["Reservas de salones del mes", stats.spaceReservations.length],
-          ["Préstamos de equipos del mes", stats.equipmentReservations.length],
-          ["Horas de salón reservadas", stats.occupiedSpaceHours],
-          ["Salones con reservas", spacesInUse],
-          [
-            "Equipos con préstamos",
-            stats.equipmentUsage.filter((item) => item.count > 0).length,
-          ],
-          ["Docentes con reservas", stats.professorStats.length],
-          ["Búsqueda aplicada", reservationSearch || "Ninguna"],
-          ["Fecha desde", dateFrom || "Sin límite"],
-          ["Fecha hasta", dateTo || "Sin límite"],
-        ])}
-        ${createWorksheet("Salones", [
-          ["Salón", "Reservas del mes", "Horas reservadas"],
-          ...stats.spaceUsage.map(({ space, count, hours }) => [
-            space.name,
-            count,
-            hours,
-          ]),
-        ])}
-        ${createWorksheet("Equipos", [
-          ["Equipo", "Salón", "Préstamos del mes"],
-          ...stats.equipmentUsage.map(({ equipment: item, count }) => [
-            item.name,
-            item.spaceNumber ?? "—",
-            count,
-          ]),
-        ])}
-        ${createWorksheet("Escuelas y motivos", [
-          ["Escuela o motivo", "Reservas del mes", "Horas reservadas"],
-          ...stats.schoolStats.map(({ label, count, hours }) => [
-            label,
-            count,
-            hours,
-          ]),
-        ])}
-        ${createWorksheet("Docentes", [
-          ["Docente", "Reservas del mes", "Horas reservadas"],
-          ...stats.professorStats.map(({ label, count, hours }) => [
-            label,
-            count,
-            hours,
-          ]),
-        ])}
-      </Workbook>`;
-    const blob = new Blob([`\uFEFF${workbook}`], {
-      type: "application/vnd.ms-excel;charset=utf-8",
-    });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `estadisticas-${todayKey}.xls`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+  const exportStatistics = async () => {
+    if (exporting) return;
+    setExporting(true);
+    setExportFeedback(null);
+    try {
+      const { downloadReservationReport } = await import("../lib/excelReport");
+      const fileName = await downloadReservationReport({
+        reservations,
+        filtered: filteredReservations,
+        spaces,
+        equipment,
+        filters: {
+          search: reservationSearch,
+          dateFrom,
+          dateTo,
+        },
+        role,
+        userEmail,
+      });
+      setExportFeedback({
+        type: "success",
+        text: `Informe generado: ${fileName}`,
+      });
+    } catch (error) {
+      console.error("No se pudo generar el informe de Excel", error);
+      setExportFeedback({
+        type: "error",
+        text: `No se pudo generar el Excel: ${error?.message || "error desconocido"}`,
+      });
+    } finally {
+      setExporting(false);
+    }
   };
   const sectionTitles = {
     "dashboard-summary": "Resumen de actividad",
@@ -714,10 +636,15 @@ export default function AdminDashboard({
                 <button
                   type="button"
                   onClick={exportStatistics}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-95"
+                  disabled={exporting}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-95 disabled:cursor-wait disabled:bg-emerald-500/80"
                 >
-                  <FaFileExcel />
-                  Exportar Excel
+                  {exporting ? (
+                    <FaSyncAlt className="animate-spin" />
+                  ) : (
+                    <FaFileExcel />
+                  )}
+                  {exporting ? "Generando informe…" : "Exportar Excel"}
                 </button>
               )}
             </div>
@@ -727,6 +654,18 @@ export default function AdminDashboard({
               ? `Última actualización: ${new Date(lastUpdatedAt).toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
               : "Esperando la primera sincronización…"}
           </p>
+          {exportFeedback && (
+            <p
+              className={`mt-1 text-xs font-semibold ${
+                exportFeedback.type === "error"
+                  ? "text-rose-600"
+                  : "text-emerald-700"
+              }`}
+              role="status"
+            >
+              {exportFeedback.text}
+            </p>
+          )}
         </div>
       </div>
 
