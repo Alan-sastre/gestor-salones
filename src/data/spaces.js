@@ -2,6 +2,8 @@ import space501Image from '../../Img/501.jpeg';
 import space502Image from '../../Img/502.jpeg';
 import space503Image from '../../Img/503.jpeg';
 import space504Image from '../../Img/504.jpeg';
+import auditorioImage from '../../Img/Auditorio.jpeg';
+import varonDelSolImage from '../../Img/VaronDelSol.jpeg';
 
 export const SPACES = [
   {
@@ -52,6 +54,7 @@ export const SPACES = [
     id: 4,
     name: 'Auditorio',
     capacidad: 100,
+    img: auditorioImage,
     inventoryNumber: 505,
     desc: 'Espacio amplio para eventos, conferencias y actividades académicas.',
     features: [
@@ -64,6 +67,7 @@ export const SPACES = [
     id: 5,
     name: 'Varon del Sol',
     capacidad: 30,
+    img: varonDelSolImage,
     desc: 'Espacio disponible para actividades académicas y reuniones.',
     features: [],
   },
